@@ -13,7 +13,7 @@ npm run dev
 
 ## 公開URL
 
-GitHub Pages: https://inocchiLIFE.github.io/mahjong-layout-tool/
+GitHub Pages: https://inocchilife.github.io/mahjong-layout-tool/
 
 `main`ブランチへpushすると、GitHub Actionsがlint・ビルド・Pages公開を自動実行します。
 
