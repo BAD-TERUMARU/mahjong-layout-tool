@@ -1,0 +1,35 @@
+:root {
+  font-family: Inter, "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+  color: #17352f;
+  background: #e9eee9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --ink: #17352f;
+  --muted: #6a7d77;
+  --cream: #fbfaf4;
+  --paper: #f4f3eb;
+  --green-950: #082b26;
+  --green-900: #0c372f;
+  --green-800: #12483d;
+  --green-700: #17604f;
+  --gold: #dcae5e;
+  --line: rgba(20, 60, 51, 0.14);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
+
+body { min-height: 100vh; background: #e9eee9; }
+
+button, input { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+
+button:focus-visible, input:focus-visible {
+  outline: 3px solid rgba(224, 173, 81, 0.58);
+  outline-offset: 2px;
+}
+
+::selection { background: #dcae5e; color: #082b26; }
+
