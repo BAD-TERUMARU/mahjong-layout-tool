@@ -276,6 +276,7 @@ const App = () => {
   const [rulerCount, setRulerCount] = useState(() => initialLayout?.scene.elements.filter((element) => element.kind === 'tile').length ?? 0)
   const [showGrid, setShowGrid] = useState(initialLayout?.settings.showGrid ?? true)
   const [snapToGrid, setSnapToGrid] = useState(initialLayout?.settings.snapToGrid ?? false)
+  const [defaultTextStyle, setDefaultTextStyle] = useState({ fontFamily: 'serif', fontSize: 22, color: '#172c27' })
   const [screenshotGrid, setScreenshotGrid] = useState(true)
   const [placementMode, setPlacementMode] = useState<PlacementMode>('select')
   const [editTextRequest, setEditTextRequest] = useState<{ id: string; token: number } | null>(null)
@@ -525,7 +526,7 @@ const App = () => {
       return
     }
     const textCount = scene.elements.filter((element) => element.kind === 'text').length
-    const item = makeText(text, x, y ?? Math.min(scene.height - 50, 180 + textCount * 48), nextZIndex())
+    const item = { ...makeText(text, x, y ?? Math.min(scene.height - 50, 180 + textCount * 48), nextZIndex()), ...defaultTextStyle }
     const dimensions = getElementDimensions(item)
     item.x = clamp(item.x, 0, scene.width - dimensions.width)
     item.y = clamp(item.y, 0, scene.height - dimensions.height)
@@ -987,7 +988,8 @@ const App = () => {
         hasItems={scene.elements.length > 0}
         hasSelection={selected.some((element) => !element.locked)}
         canEditText={Boolean(selectedText)}
-        selectedTextStyle={selectedText ? { fontFamily: selectedText.fontFamily, fontSize: selectedText.fontSize, color: selectedText.color } : null}
+        textStyle={selectedText ? { fontFamily: selectedText.fontFamily, fontSize: selectedText.fontSize, color: selectedText.color } : defaultTextStyle}
+        isEditingSelectedText={Boolean(selectedText)}
         canDuplicate={selected.length > 0}
         canEditProperties={Boolean(selectedEditable)}
         showGrid={showGrid}
@@ -1005,7 +1007,17 @@ const App = () => {
         onDuplicate={duplicateSelected}
         onRotate={rotateSelected}
         onEditSelectedText={() => selectedText && setEditTextRequest({ id: selectedText.id, token: Date.now() })}
-        onUpdateSelectedTextStyle={(style) => selectedText && saveProperties(selectedText.id, style)}
+        onUpdateTextStyle={(style) => {
+          if (selectedText) {
+            saveProperties(selectedText.id, style)
+            return
+          }
+          setDefaultTextStyle((current) => ({
+            fontFamily: style.fontFamily ?? current.fontFamily,
+            fontSize: style.fontSize === undefined ? current.fontSize : clamp(style.fontSize, 12, 72),
+            color: style.color ?? current.color,
+          }))
+        }}
         onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}

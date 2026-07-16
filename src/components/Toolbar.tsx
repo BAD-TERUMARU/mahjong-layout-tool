@@ -7,7 +7,8 @@ interface ToolbarProps {
   hasItems: boolean
   hasSelection: boolean
   canEditText: boolean
-  selectedTextStyle: { fontFamily: string; fontSize: number; color: string } | null
+  textStyle: { fontFamily: string; fontSize: number; color: string }
+  isEditingSelectedText: boolean
   canDuplicate: boolean
   canEditProperties: boolean
   showGrid: boolean
@@ -22,7 +23,7 @@ interface ToolbarProps {
   onDuplicate: () => void
   onRotate: () => void
   onEditSelectedText: () => void
-  onUpdateSelectedTextStyle: (style: { fontFamily?: string; fontSize?: number; color?: string }) => void
+  onUpdateTextStyle: (style: { fontFamily?: string; fontSize?: number; color?: string }) => void
   onEditProperties: () => void
   onRandomHand: (count: 13 | 14) => void
   onShuffle: () => void
@@ -108,12 +109,11 @@ export const Toolbar = (props: ToolbarProps) => {
           <ToolButton label="選択を削除" icon="⌫" onClick={props.onDeleteSelected} disabled={!props.hasSelection} />
           <ToolButton label="すべて削除" icon="×" onClick={props.onClear} disabled={!props.hasItems} danger />
           <div className="font-ribbon" aria-label="フォント">
-            <span className="font-ribbon-label">フォント</span>
+            <span className="font-ribbon-label">{props.isEditingSelectedText ? '選択中の文字' : '新規文字の既定スタイル'}</span>
             <select
               aria-label="フォント"
-              value={props.selectedTextStyle?.fontFamily ?? 'serif'}
-              onChange={(event) => props.onUpdateSelectedTextStyle({ fontFamily: event.target.value })}
-              disabled={!props.selectedTextStyle}
+              value={props.textStyle.fontFamily}
+              onChange={(event) => props.onUpdateTextStyle({ fontFamily: event.target.value })}
             >
               <option value="serif">明朝体</option>
               <option value="sans-serif">ゴシック体</option>
@@ -123,18 +123,17 @@ export const Toolbar = (props: ToolbarProps) => {
               <option value="monospace">等幅</option>
             </select>
             <div className="font-ribbon-controls">
-              <button type="button" aria-label="文字サイズを小さく" disabled={!props.selectedTextStyle} onClick={() => props.onUpdateSelectedTextStyle({ fontSize: Math.max(12, (props.selectedTextStyle?.fontSize ?? 12) - 2) })}>A−</button>
+              <button type="button" aria-label="文字サイズを小さく" onClick={() => props.onUpdateTextStyle({ fontSize: Math.max(12, props.textStyle.fontSize - 2) })}>A−</button>
               <input
                 type="number"
                 min="12"
                 max="72"
                 aria-label="文字サイズ"
-                value={props.selectedTextStyle?.fontSize ?? ''}
-                onChange={(event) => props.onUpdateSelectedTextStyle({ fontSize: Number(event.target.value) })}
-                disabled={!props.selectedTextStyle}
+                value={props.textStyle.fontSize}
+                onChange={(event) => props.onUpdateTextStyle({ fontSize: Number(event.target.value) })}
               />
-              <button type="button" aria-label="文字サイズを大きく" disabled={!props.selectedTextStyle} onClick={() => props.onUpdateSelectedTextStyle({ fontSize: Math.min(72, (props.selectedTextStyle?.fontSize ?? 72) + 2) })}>A+</button>
-              <label title="文字色"><span>A</span><input type="color" aria-label="文字色" value={props.selectedTextStyle?.color ?? '#172c27'} onChange={(event) => props.onUpdateSelectedTextStyle({ color: event.target.value })} disabled={!props.selectedTextStyle} /></label>
+              <button type="button" aria-label="文字サイズを大きく" onClick={() => props.onUpdateTextStyle({ fontSize: Math.min(72, props.textStyle.fontSize + 2) })}>A+</button>
+              <label title="文字色"><span>A</span><input type="color" aria-label="文字色" value={props.textStyle.color} onChange={(event) => props.onUpdateTextStyle({ color: event.target.value })} /></label>
             </div>
           </div>
         </div>}
