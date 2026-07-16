@@ -276,7 +276,9 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       let width = clamp(resize.startWidth + deltaX, 24, propsRef.current.scene.width)
       let height = clamp(resize.startHeight + deltaY, 24, propsRef.current.scene.height)
       if (event.shiftKey) {
-        const factor = Math.max(width / resize.startWidth, height / resize.startHeight)
+        const xScale = width / resize.startWidth
+        const yScale = height / resize.startHeight
+        const factor = Math.abs(xScale - 1) >= Math.abs(yScale - 1) ? xScale : yScale
         width = clamp(resize.startWidth * factor, 24, propsRef.current.scene.width)
         height = clamp(resize.startHeight * factor, 24, propsRef.current.scene.height)
       }
