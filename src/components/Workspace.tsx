@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { TILE_MAP } from '../data/tiles'
@@ -107,6 +108,15 @@ interface PanState {
   startY: number
 }
 
+interface DropPreview {
+  kind: 'tile' | 'symbol' | 'text' | 'image'
+  x: number
+  y: number
+  width: number
+  height: number
+  label: string
+}
+
 const isPalettePoint = (clientX: number, clientY: number) => {
   const palette = document.querySelector<HTMLElement>('.palette-panel')
   if (!palette) return false
@@ -144,6 +154,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   const [editor, setEditor] = useState<TextEditorState | null>(null)
   const [drawing, setDrawing] = useState<DrawingState | null>(null)
   const [camera, setCamera] = useState({ x: 0, y: 0 })
+  const [draggingIds, setDraggingIds] = useState<Set<string>>(() => new Set())
+  const [dropPreview, setDropPreview] = useState<DropPreview | null>(null)
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => { if (event.code === 'Space') spaceDownRef.current = true }
@@ -180,6 +192,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         ? [...selectedElements, element]
         : [element]
     const uniqueGroup = group.filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
+    setDraggingIds(new Set(uniqueGroup.map((item) => item.id)))
     dragRef.current = {
       pointerId: event.pointerId,
       startClientX: event.clientX,
@@ -251,6 +264,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     if (droppedInTrash) currentProps.onMoveElements(drag.starts)
     if (!drag.moved && drag.toggleOnClick) currentProps.onSelectElement(drag.primaryId, false)
     dragRef.current = null
+    setDraggingIds(new Set())
     currentProps.onTrashHover(false)
     currentProps.onEndDrag()
     if (droppedInTrash) currentProps.onDeleteDragged(drag.starts.map((item) => item.id))
@@ -474,6 +488,36 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     })
   }
 
+  const updateDropPreview = (event: ReactDragEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const x = event.clientX - bounds.left - camera.x
+    const y = event.clientY - bounds.top - camera.y
+    const symbolType = event.dataTransfer.getData('application/x-mahjong-symbol')
+    if (symbolType === 'rectangle' || symbolType === 'circle' || symbolType === 'triangle' || symbolType === 'cross') {
+      const dimensions = getSymbolBaseDimensions(symbolType)
+      setDropPreview({
+        kind: 'symbol',
+        x: x - dimensions.width / 2,
+        y: y - dimensions.height / 2,
+        width: dimensions.width,
+        height: dimensions.height,
+        label: SYMBOL_LABELS[symbolType],
+      })
+      return
+    }
+    if (event.dataTransfer.types.includes('application/x-mahjong-tile')) {
+      setDropPreview({ kind: 'tile', x: x - TILE_WIDTH / 2, y: y - TILE_HEIGHT / 2, width: TILE_WIDTH, height: TILE_HEIGHT, label: '牌' })
+      return
+    }
+    if (event.dataTransfer.types.includes('Files')) {
+      setDropPreview({ kind: 'image', x: x - 80, y: y - 55, width: 160, height: 110, label: '画像' })
+      return
+    }
+    if (event.dataTransfer.types.includes('text/plain')) {
+      setDropPreview({ kind: 'text', x: x - 70, y: y - 20, width: 140, height: 40, label: '文字' })
+    }
+  }
+
   const marqueeStyle = marquee ? {
     left: Math.min(marquee.startX, marquee.currentX) + camera.x,
     top: Math.min(marquee.startY, marquee.currentY) + camera.y,
@@ -491,14 +535,20 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       onPointerMove={moveCanvasPointer}
       onPointerUp={finishCanvasPointer}
       onPointerCancel={finishCanvasPointer}
+      onDragEnter={updateDropPreview}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('application/x-mahjong-tile') || event.dataTransfer.types.includes('application/x-mahjong-symbol') || event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('text/plain')) {
           event.preventDefault()
           event.dataTransfer.dropEffect = 'copy'
+          updateDropPreview(event)
         }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropPreview(null)
       }}
       onDrop={(event) => {
         event.preventDefault()
+        setDropPreview(null)
         const tileId = event.dataTransfer.getData('application/x-mahjong-tile')
         const bounds = event.currentTarget.getBoundingClientRect()
         const x = event.clientX - bounds.left - camera.x
@@ -535,7 +585,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         const lockedLabel = element.locked ? '、ロック中' : ''
         const commonProps = {
           type: 'button' as const,
-          className: `placed-item placed-${element.kind}${element.selected ? ' selected' : ''}${element.locked ? ' locked' : ''}`,
+          className: `placed-item placed-${element.kind}${element.selected ? ' selected' : ''}${draggingIds.has(element.id) ? ' dragging' : ''}${element.locked ? ' locked' : ''}`,
           style: {
             left: element.x + camera.x,
             top: element.y + camera.y,
@@ -709,6 +759,17 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       )}
 
       {marquee?.visible && <div className="selection-marquee export-hidden" style={marqueeStyle} />}
+
+      {dropPreview && <div
+        className={`drop-placement-preview drop-preview-${dropPreview.kind} export-hidden`}
+        style={{
+          left: dropPreview.x + camera.x,
+          top: dropPreview.y + camera.y,
+          width: dropPreview.width,
+          height: dropPreview.height,
+        }}
+        aria-hidden="true"
+      ><span>{dropPreview.label}</span></div>}
 
       {drawing && (
         <svg
