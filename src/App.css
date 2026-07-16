@@ -169,8 +169,6 @@
 .legend-select { border: 2px solid #e3b457; border-radius: 2px; }
 .workspace-scroll { flex: 1 1 auto; padding: 12px; overflow: auto; background: #dfe6e0; }
 .workspace-tile-ruler { box-sizing: border-box; min-width: 674px; margin-bottom: 5px; padding: 3px 0 4px 24px; border: 1px solid #b9c8c0; border-radius: 6px; background: #f9fcfa; color: #61756d; }
-.workspace-tile-ruler-title { display: flex; align-items: baseline; gap: 5px; height: 14px; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
-.workspace-tile-ruler-title strong { color: #1b5a49; font: 800 11px ui-monospace, monospace; letter-spacing: 0; }
 .workspace-tile-ruler-track { display: grid; grid-template-columns: repeat(13, 48px); column-gap: 2px; align-items: end; }
 .workspace-tile-ruler-track span { position: relative; display: grid; place-items: center; height: 16px; border-top: 1px solid #aebfb7; color: #85968f; font: 700 10px ui-monospace, monospace; }
 .workspace-tile-ruler-track span::before { position: absolute; top: -3px; left: 50%; width: 1px; height: 5px; background: #92a79e; content: ''; }

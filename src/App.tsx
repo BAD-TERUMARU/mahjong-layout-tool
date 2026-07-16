@@ -1030,8 +1030,7 @@ const App = () => {
             </div>
           </div>
           <div className="workspace-scroll">
-            <div className="workspace-tile-ruler" style={{ width: scene.width }} aria-label={`牌の枚数 ${tileCount}枚。13枚基準`}>
-              <div className="workspace-tile-ruler-title">牌数メモリ <strong>{tileCount}/13枚</strong></div>
+            <div className="workspace-tile-ruler" style={{ width: scene.width }} aria-label="牌の位置目盛り。1から13">
               <div className="workspace-tile-ruler-track">
                 {Array.from({ length: 13 }, (_, index) => (
                   <span key={index} className={index < tileCount ? 'filled' : ''} title={`${index + 1}枚目`}>{index + 1}</span>
