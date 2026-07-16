@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { DrawingElement, ImageElement, SymbolElement, TextElement } from '../types'
+import { saveCustomColors } from '../utils/colors'
 
 const CUSTOM_COLORS_KEY = 'mahjong-layout-tool:custom-colors-v1'
 
@@ -47,7 +48,7 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
   const updateCustomColors = (next: string[]) => {
     setCustomColors(next)
     try {
-      localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(next))
+      saveCustomColors(next)
     } catch {
       // 色パレットは現在の編集操作を妨げないよう、保存失敗時も画面上では利用可能にする。
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PlacementMode } from '../types'
 import { TEXT_COLOR_PALETTE, readCustomColors, saveCustomColors } from '../utils/colors'
 
@@ -76,6 +76,12 @@ export const Toolbar = (props: ToolbarProps) => {
   const [text, setText] = useState('')
   const [activeTab, setActiveTab] = useState<RibbonTab>('home')
   const [customColors, setCustomColors] = useState(readCustomColors)
+
+  useEffect(() => {
+    const refreshCustomColors = () => setCustomColors(readCustomColors())
+    window.addEventListener('mahjong-custom-colors-changed', refreshCustomColors)
+    return () => window.removeEventListener('mahjong-custom-colors-changed', refreshCustomColors)
+  }, [])
 
   const addText = () => {
     const value = text.trim()

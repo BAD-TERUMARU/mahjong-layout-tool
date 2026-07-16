@@ -18,6 +18,7 @@ export const readCustomColors = () => {
 export const saveCustomColors = (colors: string[]) => {
   try {
     localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(colors.slice(-24)))
+    window.dispatchEvent(new Event('mahjong-custom-colors-changed'))
   } catch {
     // 保存に失敗しても、その時点のパレットは画面上で使えるようにする。
   }
