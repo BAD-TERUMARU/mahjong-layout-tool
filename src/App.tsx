@@ -534,7 +534,8 @@ const App = () => {
   }
 
   const placeSymbol = (symbolType: SymbolType, x: number, y: number) => {
-    const item = makeSymbol(symbolType, x, y, nextZIndex())
+    // 新規文字と同じ既定色を、これから追加する図形にも使用する。
+    const item = { ...makeSymbol(symbolType, x, y, nextZIndex()), color: defaultTextStyle.color }
     const dimensions = getElementDimensions(item)
     item.x = clamp(snap(x - dimensions.width / 2, snapToGrid), 0, scene.width - dimensions.width)
     item.y = clamp(snap(y - dimensions.height / 2, snapToGrid), 0, scene.height - dimensions.height)
