@@ -12,6 +12,7 @@ interface ToolbarProps {
   isEditingSelectedText: boolean
   selectedShapeColor: string | null
   canDuplicate: boolean
+  canToggleTileFaces: boolean
   canEditProperties: boolean
   showGrid: boolean
   snapToGrid: boolean
@@ -23,6 +24,7 @@ interface ToolbarProps {
   onDeleteSelected: () => void
   onDuplicate: () => void
   onRotate: () => void
+  onToggleTileFaces: () => void
   onEditSelectedText: () => void
   onUpdateTextStyle: (style: { fontFamily?: string; fontSize?: number; color?: string }) => void
   onUpdateSelectedShapeColor: (color: string) => void
@@ -142,6 +144,7 @@ export const Toolbar = (props: ToolbarProps) => {
           <ToolButton label="やり直す" icon="↷" onClick={props.onRedo} disabled={!props.canRedo} />
           <ToolButton label="牌を整列" icon="≡" onClick={props.onAlign} disabled={!props.hasItems} />
           <ToolButton label="複製" icon="⧉" onClick={props.onDuplicate} disabled={!props.canDuplicate} />
+          <ToolButton label="表裏" icon="▣" onClick={props.onToggleTileFaces} disabled={!props.canToggleTileFaces} />
           <ToolButton label="回転" icon="↻" onClick={props.onRotate} disabled={!props.hasSelection} />
           <ToolButton label="文字編集" icon="Aa" onClick={props.onEditSelectedText} disabled={!props.canEditText} />
           <ToolButton label="スタイル" icon="🎨" onClick={props.onEditProperties} disabled={!props.canEditProperties} />

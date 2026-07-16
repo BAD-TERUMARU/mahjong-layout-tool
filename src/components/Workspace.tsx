@@ -22,6 +22,7 @@ import {
   getSymbolBaseDimensions,
   snap,
   SYMBOL_LABELS,
+  TILE_GAP,
   TILE_HEIGHT,
   TILE_WIDTH,
 } from '../utils/layout'
@@ -212,8 +213,26 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     if (!primary) return
     const rawX = primary.x + clientX - drag.startClientX
     const rawY = primary.y + clientY - drag.startClientY
-    let deltaX = snap(rawX, currentProps.snapToGrid) - primary.x
-    let deltaY = snap(rawY, currentProps.snapToGrid) - primary.y
+    let targetX = snap(rawX, currentProps.snapToGrid)
+    let targetY = snap(rawY, currentProps.snapToGrid)
+    const primaryElement = currentProps.scene.elements.find((element) => element.id === drag.primaryId)
+    if (primaryElement?.kind === 'tile' && drag.starts.length === 1) {
+      const neighbor = currentProps.scene.elements
+        .filter((element) => element.kind === 'tile' && element.id !== primaryElement.id && !element.locked)
+        .flatMap((element) => ([
+          { x: element.x + TILE_WIDTH + TILE_GAP, y: element.y },
+          { x: element.x - TILE_WIDTH - TILE_GAP, y: element.y },
+        ]))
+        .map((candidate) => ({ candidate, distance: Math.hypot(targetX - candidate.x, targetY - candidate.y) }))
+        .filter(({ candidate }) => Math.abs(targetY - candidate.y) <= 10 && Math.abs(targetX - candidate.x) <= 10)
+        .sort((a, b) => a.distance - b.distance)[0]
+      if (neighbor) {
+        targetX = neighbor.candidate.x
+        targetY = neighbor.candidate.y
+      }
+    }
+    const deltaX = targetX - primary.x
+    const deltaY = targetY - primary.y
     currentProps.onMoveElements(drag.starts.map((item) => ({
       id: item.id,
       x: Math.round(item.x + deltaX),
@@ -673,7 +692,19 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       {marquee?.visible && <div className="selection-marquee export-hidden" style={marqueeStyle} />}
 
       {drawing && (
-        <svg className="drawing-preview export-hidden" viewBox={`0 0 ${props.scene.width} ${props.scene.height}`} style={{ transform: `translate(${camera.x}px, ${camera.y}px)` }} aria-hidden="true">
+        <svg
+          className="drawing-preview export-hidden"
+          style={{
+            left: 0,
+            top: 0,
+            right: 'auto',
+            bottom: 'auto',
+            width: props.scene.width,
+            height: props.scene.height,
+            transform: `translate(${camera.x}px, ${camera.y}px)`,
+          }}
+          aria-hidden="true"
+        >
           <polyline points={drawing.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}

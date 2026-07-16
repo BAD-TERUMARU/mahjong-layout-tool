@@ -432,6 +432,21 @@ const App = () => {
     })
   }
 
+  const toggleSelectedTileFaces = () => {
+    const selectedIds = new Set(
+      scene.elements
+        .filter((element) => element.kind === 'tile' && element.selected && !element.locked)
+        .map((element) => element.id),
+    )
+    if (!selectedIds.size) return
+    history.commit({
+      ...scene,
+      elements: scene.elements.map((element) => element.kind === 'tile' && selectedIds.has(element.id)
+        ? { ...element, faceDown: !element.faceDown }
+        : element),
+    })
+  }
+
   const rotateSelected = () => {
     if (!scene.elements.some((element) => element.selected && !element.locked)) return
     history.commit({
@@ -972,6 +987,7 @@ const App = () => {
         isEditingSelectedText={Boolean(selectedText)}
         selectedShapeColor={selectedColoredElement?.color ?? null}
         canDuplicate={selected.length > 0}
+        canToggleTileFaces={selected.some((element) => element.kind === 'tile' && !element.locked)}
         canEditProperties={Boolean(selectedEditable)}
         showGrid={showGrid}
         snapToGrid={snapToGrid}
@@ -986,6 +1002,7 @@ const App = () => {
         onDeleteSelected={deleteSelected}
         onDuplicate={duplicateSelected}
         onRotate={rotateSelected}
+        onToggleTileFaces={toggleSelectedTileFaces}
         onEditSelectedText={() => selectedText && setEditTextRequest({ id: selectedText.id, token: Date.now() })}
         onUpdateTextStyle={(style) => {
           if (selectedText) {
