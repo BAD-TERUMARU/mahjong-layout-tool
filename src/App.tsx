@@ -29,7 +29,6 @@ import type {
 import {
   DEFAULT_WORKSPACE_HEIGHT,
   DEFAULT_WORKSPACE_WIDTH,
-  GRID_SIZE,
   MAX_WORKSPACE_HEIGHT,
   MAX_WORKSPACE_WIDTH,
   MIN_WORKSPACE_HEIGHT,
@@ -400,12 +399,16 @@ const App = () => {
         && (position.x !== element.x || position.y !== element.y)
     })
     if (movedTile) setRulerCount(0)
-    history.updateLive({
-      ...scene,
-      elements: scene.elements.map((element) => {
+    const elements = scene.elements.map((element) => {
         const position = byId.get(element.id)
         return position && !element.locked ? { ...element, x: position.x, y: position.y } : element
-      }),
+      })
+    const bounds = getSceneContentBounds({ ...scene, elements })
+    history.updateLive({
+      ...scene,
+      elements,
+      width: Math.max(scene.width, bounds.width),
+      height: Math.max(scene.height, bounds.height),
     })
   }
 
@@ -753,9 +756,7 @@ const App = () => {
   }
 
   const resizeElement = (id: string, width: number, height: number) => {
-    history.updateLive({
-      ...scene,
-      elements: scene.elements.map((element) => {
+    const elements = scene.elements.map((element) => {
         if (element.id !== id || element.locked) return element
         if (element.kind === 'symbol') {
           const base = getElementDimensions({ ...element, scale: 1, scaleX: 1, scaleY: 1 })
@@ -765,7 +766,13 @@ const App = () => {
           return { ...element, width: clamp(width, 24, scene.width), height: clamp(height, 24, scene.height) }
         }
         return element
-      }),
+      })
+    const bounds = getSceneContentBounds({ ...scene, elements })
+    history.updateLive({
+      ...scene,
+      elements,
+      width: Math.max(scene.width, bounds.width),
+      height: Math.max(scene.height, bounds.height),
     })
   }
 
@@ -1058,15 +1065,6 @@ const App = () => {
           onSelectPlacementMode={setPlacementMode}
         />
         <section className="workspace-panel">
-          <div className="workspace-meta">
-            <div>
-              <span className="canvas-badge">WORKSPACE</span>
-              <span>{selected.length ? `${selected.length}件を選択中` : placementMode === 'select' ? '空白をドラッグして範囲選択' : '同じツールを連続配置できます（Escで解除）'}</span>
-            </div>
-            <div className="workspace-meta-actions">
-              <div className="legend"><span><i className="legend-grid" />{GRID_SIZE}pxグリッド</span><span><i className="legend-select" />選択中</span></div>
-            </div>
-          </div>
           <div className="workspace-scroll">
             <div className="workspace-tile-ruler" style={{ width: scene.width }} aria-label={`牌の枚数 ${rulerCount}枚。13枚基準`}>
               <div className="workspace-tile-ruler-title">牌数メモリ <strong>{rulerCount}<small>/13枚</small></strong></div>

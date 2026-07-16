@@ -30,6 +30,7 @@ const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; h
   { mode: 'circle', icon: '〇', label: '丸', hint: '牌2枚分' },
   { mode: 'triangle', icon: '△', label: '三角形', hint: '牌2枚分' },
   { mode: 'cross', icon: '✕', label: 'バツ', hint: '牌1枚分' },
+  { mode: 'line', icon: '╱', label: '直線', hint: 'ドラッグで描画' },
   { mode: 'text', icon: 'T', label: 'クリック文字', hint: '自由入力' },
 ]
 

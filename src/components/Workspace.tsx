@@ -210,8 +210,9 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     const rawY = primary.y + clientY - drag.startClientY
     let deltaX = snap(rawX, currentProps.snapToGrid) - primary.x
     let deltaY = snap(rawY, currentProps.snapToGrid) - primary.y
-    deltaX = clamp(deltaX, -drag.bounds.left, currentProps.scene.width - drag.bounds.right)
-    deltaY = clamp(deltaY, -drag.bounds.top, currentProps.scene.height - drag.bounds.bottom)
+    // 右・下方向は親側でキャンバスを自動拡張する。左・上方向だけは負の座標を防ぐ。
+    deltaX = Math.max(deltaX, -drag.bounds.left)
+    deltaY = Math.max(deltaY, -drag.bounds.top)
 
     currentProps.onMoveElements(drag.starts.map((item) => ({
       id: item.id,

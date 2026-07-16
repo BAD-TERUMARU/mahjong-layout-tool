@@ -20,8 +20,9 @@ export const DEFAULT_WORKSPACE_WIDTH = 900
 export const DEFAULT_WORKSPACE_HEIGHT = 560
 export const MIN_WORKSPACE_WIDTH = 520
 export const MIN_WORKSPACE_HEIGHT = 320
-export const MAX_WORKSPACE_WIDTH = 10000
-export const MAX_WORKSPACE_HEIGHT = 3000
+// 作業領域は配置に合わせて自動拡張する。ブラウザ描画の実用的な安全上限のみ残す。
+export const MAX_WORKSPACE_WIDTH = 100000
+export const MAX_WORKSPACE_HEIGHT = 100000
 
 export const SYMBOL_LABELS: Record<SymbolType, string> = {
   rectangle: '長方形（牌3枚分）',
