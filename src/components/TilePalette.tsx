@@ -25,11 +25,11 @@ const PaletteTile = ({ tile, onAdd }: { tile: TileDefinition; onAdd: () => void 
   </button>
 )
 
-const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; hint: string }> = [
-  { mode: 'rectangle', icon: '▭', label: '長方形', hint: '牌3枚分' },
-  { mode: 'circle', icon: '〇', label: '丸', hint: '牌2枚分' },
-  { mode: 'triangle', icon: '△', label: '三角形', hint: '牌2枚分' },
-  { mode: 'cross', icon: '✕', label: 'バツ', hint: '牌1枚分' },
+const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; hint: string; dragOnly?: boolean }> = [
+  { mode: 'rectangle', icon: '▭', label: '長方形', hint: 'ドラッグして配置', dragOnly: true },
+  { mode: 'circle', icon: '〇', label: '丸', hint: 'ドラッグして配置', dragOnly: true },
+  { mode: 'triangle', icon: '△', label: '三角形', hint: 'ドラッグして配置', dragOnly: true },
+  { mode: 'cross', icon: '✕', label: 'バツ', hint: 'ドラッグして配置', dragOnly: true },
   { mode: 'line', icon: '╱', label: '直線', hint: 'ドラッグで描画' },
   { mode: 'text', icon: 'T', label: 'クリック文字', hint: '自由入力' },
 ]
@@ -68,10 +68,16 @@ export const TilePalette = ({ onAddTile, placementMode, trashActive, onSelectPla
             <button
               key={choice.mode}
               type="button"
-              className={`symbol-palette-button${placementMode === choice.mode ? ' active' : ''}`}
-              onClick={() => onSelectPlacementMode(choice.mode)}
-              aria-pressed={placementMode === choice.mode}
-              aria-label={`${choice.label}配置ツール`}
+              draggable={choice.dragOnly}
+              className={`symbol-palette-button${!choice.dragOnly && placementMode === choice.mode ? ' active' : ''}${choice.dragOnly ? ' drag-only' : ''}`}
+              onClick={() => !choice.dragOnly && onSelectPlacementMode(choice.mode)}
+              onDragStart={(event) => {
+                if (!choice.dragOnly) return
+                event.dataTransfer.setData('application/x-mahjong-symbol', choice.mode)
+                event.dataTransfer.effectAllowed = 'copy'
+              }}
+              aria-pressed={!choice.dragOnly && placementMode === choice.mode}
+              aria-label={choice.dragOnly ? `${choice.label}をドラッグして配置` : `${choice.label}配置ツール`}
             >
               <b aria-hidden="true">{choice.icon}</b>
               <span>{choice.label}<small>{choice.hint}</small></span>

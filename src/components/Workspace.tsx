@@ -66,6 +66,7 @@ interface DragState {
   starts: ElementPosition[]
   moved: boolean
   inTrash: boolean
+  toggleOnClick: boolean
 }
 
 interface MarqueeState {
@@ -167,7 +168,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     if (event.button !== 0) return
     if (spaceDownRef.current) return
     event.stopPropagation()
-    props.onSelectElement(element.id, event.shiftKey)
+    const toggleOnClick = element.selected && !event.shiftKey && element.kind !== 'tile'
+    if (!toggleOnClick) props.onSelectElement(element.id, event.shiftKey)
     if (element.locked) return
 
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -186,6 +188,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       starts: uniqueGroup.map((item) => ({ id: item.id, x: item.x, y: item.y })),
       moved: false,
       inTrash: false,
+      toggleOnClick,
     }
     props.onBeginDrag()
   }
@@ -246,6 +249,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     if (!drag) return
     const droppedInTrash = drag.moved && (drag.inTrash || isPalettePoint(clientX, clientY))
     if (droppedInTrash) currentProps.onMoveElements(drag.starts)
+    if (!drag.moved && drag.toggleOnClick) currentProps.onSelectElement(drag.primaryId, false)
     dragRef.current = null
     currentProps.onTrashHover(false)
     currentProps.onEndDrag()
@@ -488,7 +492,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       onPointerUp={finishCanvasPointer}
       onPointerCancel={finishCanvasPointer}
       onDragOver={(event) => {
-        if (event.dataTransfer.types.includes('application/x-mahjong-tile') || event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('text/plain')) {
+        if (event.dataTransfer.types.includes('application/x-mahjong-tile') || event.dataTransfer.types.includes('application/x-mahjong-symbol') || event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('text/plain')) {
           event.preventDefault()
           event.dataTransfer.dropEffect = 'copy'
         }
@@ -501,6 +505,11 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         const y = event.clientY - bounds.top - camera.y
         if (TILE_MAP.has(tileId)) {
           props.onDropTile(tileId, x - TILE_WIDTH / 2, y - TILE_HEIGHT / 2)
+          return
+        }
+        const symbolType = event.dataTransfer.getData('application/x-mahjong-symbol')
+        if (symbolType === 'rectangle' || symbolType === 'circle' || symbolType === 'triangle' || symbolType === 'cross') {
+          props.onPlaceSymbol(symbolType, x, y)
           return
         }
         const files = [...event.dataTransfer.files].filter((file) => file.type.startsWith('image/'))

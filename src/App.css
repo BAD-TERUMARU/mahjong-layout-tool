@@ -207,6 +207,8 @@
 .symbol-palette-button small { color: #84958f; font-size: 8px; font-weight: 500; }
 .symbol-palette-button:hover { border-color: #9fc6b7; background: #fff; }
 .symbol-palette-button.active { border-color: #23826a; background: #d7eee4; box-shadow: inset 0 0 0 1px rgba(35, 130, 106, .22); }
+.symbol-palette-button.drag-only { cursor: grab; }
+.symbol-palette-button.drag-only:active { cursor: grabbing; }
 
 .workspace-panel {
   position: absolute;
@@ -276,7 +278,7 @@
 .placed-tile { border-radius: 5px; box-shadow: 0 4px 6px rgba(24, 45, 39, .22); }
 .placed-tile img { position: absolute; left: 50%; top: 50%; width: 48px; height: 66px; display: block; object-fit: contain; transform-origin: center; pointer-events: none; }
 .tile-back { position: absolute; left: 50%; top: 50%; width: 48px; height: 66px; box-sizing: border-box; border: 0; border-radius: 5px; background: #315f79; box-shadow: 0 3px 6px rgba(24, 45, 39, .22); transform-origin: center; pointer-events: none; }
-.placed-item.selected::after { content: ""; position: absolute; inset: -4px; border: 2px solid #e3a52f; border-radius: 7px; box-shadow: 0 0 0 2px rgba(18, 73, 61, .5), 0 0 10px rgba(227, 165, 47, .34); pointer-events: none; }
+.placed-item.selected::after { content: ""; position: absolute; inset: -2px; border: 1px solid #5b9bc5; border-radius: 6px; box-shadow: 0 0 0 1px rgba(91, 155, 197, .2); pointer-events: none; }
 .placed-item.locked::before { content: ""; position: absolute; inset: -3px; border: 1px dashed rgba(55, 80, 73, .55); border-radius: 6px; pointer-events: none; }
 .lock-badge { position: absolute; right: -8px; top: -10px; z-index: 4; width: 19px; height: 19px; display: grid; place-items: center; border: 1px solid #cad5cf; border-radius: 50%; background: #fff; font-size: 10px; box-shadow: 0 2px 5px rgba(20, 55, 46, .2); pointer-events: none; }
 .placed-text { border-radius: 4px; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; white-space: nowrap; }

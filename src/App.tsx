@@ -361,13 +361,14 @@ const App = () => {
   const selectElement = (id: string, additive: boolean) => {
     const target = scene.elements.find((element) => element.id === id)
     if (!target) return
-    const preserveGroup = target.selected && !additive
+    const toggleOff = target.selected && !additive && target.kind !== 'tile'
+    const preserveGroup = target.selected && !additive && target.kind === 'tile'
     history.updateLive({
       ...scene,
       elements: scene.elements.map((element) => ({
         ...element,
         selected: element.id === id
-          ? additive ? !element.selected : true
+          ? toggleOff ? false : additive ? !element.selected : true
           : additive || preserveGroup ? element.selected : false,
       })),
     })
