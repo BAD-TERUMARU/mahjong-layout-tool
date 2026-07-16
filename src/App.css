@@ -1,4 +1,4 @@
-.app-shell { min-height: 100vh; background: radial-gradient(circle at 75% 20%, #f6f5ef 0, #e7ece7 46%, #dce5df 100%); }
+.app-shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: radial-gradient(circle at 75% 20%, #f6f5ef 0, #e7ece7 46%, #dce5df 100%); }
 
 .app-header {
   height: 62px;
@@ -158,9 +158,9 @@
 .capture-grid-toggle { display: flex; align-items: center; gap: 4px; color: #536b64; font-size: 10px; white-space: nowrap; cursor: pointer; }
 .capture-grid-toggle input { accent-color: var(--green-700); }
 
-.app-body { height: calc(100vh - 194px); min-height: 600px; display: flex; padding: 18px; gap: 18px; }
+.app-body { position: relative; flex: 1 1 auto; min-height: 0; display: block; padding: 12px; }
 .palette-panel, .workspace-panel { border: 1px solid rgba(17, 60, 51, .14); border-radius: 14px; background: rgba(251, 250, 244, .93); box-shadow: 0 12px 34px rgba(26, 57, 49, .1); overflow: hidden; }
-.palette-panel { position: relative; flex: 0 0 238px; display: flex; flex-direction: column; transition: border-color .16s, background .16s, box-shadow .16s; }
+.palette-panel { position: absolute; z-index: 20; top: 12px; bottom: 12px; left: 12px; width: 238px; display: flex; flex-direction: column; transition: border-color .16s, background .16s, box-shadow .16s; }
 .palette-panel.trash-active { border: 3px solid #bd493b; background: #fff0ed; box-shadow: 0 0 0 5px rgba(189, 73, 59, .17), 0 12px 34px rgba(88, 34, 27, .2); }
 .palette-panel.trash-active > :not(.palette-trash-message) { opacity: .16; }
 .palette-trash-message { position: absolute; inset: 0; z-index: 30; display: grid; place-content: center; gap: 7px; padding: 20px; text-align: center; color: #9e3025; background: rgba(255, 241, 237, .86); opacity: 0; pointer-events: none; transition: opacity .15s; }
@@ -201,13 +201,13 @@
 .symbol-palette-button:hover { border-color: #9fc6b7; background: #fff; }
 .symbol-palette-button.active { border-color: #23826a; background: #d7eee4; box-shadow: inset 0 0 0 1px rgba(35, 130, 106, .22); }
 
-.workspace-panel { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; background: #f8f8f2; }
+.workspace-panel { width: 100%; height: 100%; min-width: 0; display: flex; flex-direction: column; background: #f8f8f2; }
 .workspace-size-controls { display: flex; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid #cdd9d2; border-radius: 7px; background: #fff; }
 .workspace-size-controls label { display: flex; align-items: center; gap: 4px; color: #536b64; font-size: 10px; }
 .workspace-size-controls input { width: 64px; height: 25px; padding: 0 4px; border: 1px solid #d6dfda; border-radius: 4px; color: #244a40; background: #fbfcfa; font: 600 10px ui-monospace, monospace; }
 .workspace-size-controls small { color: #87958f; }
 .canvas-badge { padding: 4px 7px; border-radius: 4px; background: #e2ebe5; color: #1a5b4b; font-weight: 800; font-size: 9px; letter-spacing: .12em; }
-.workspace-scroll { flex: 1 1 auto; padding: 12px; overflow: hidden; background: #dfe6e0; }
+.workspace-scroll { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0; overflow: hidden; background: #dfe6e0; }
 .workspace-canvas { cursor: grab; }
 .workspace-canvas:active { cursor: grabbing; }
 .workspace-tile-ruler { box-sizing: border-box; min-width: 674px; margin-bottom: 5px; padding: 3px 0 4px 24px; border: 1px solid #b9c8c0; border-radius: 6px; background: #f9fcfa; color: #61756d; }
@@ -222,7 +222,10 @@
 
 .workspace-canvas {
   position: relative;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-width: 100%;
+  max-width: 100%;
+  min-height: 0;
   overflow: hidden;
   border-radius: 7px;
   border: 2px solid #46685f;
@@ -370,14 +373,9 @@ kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; bor
 @keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
 
 @media (max-width: 1000px) {
-  .app-body { height: auto; min-height: calc(100vh - 150px); flex-direction: column-reverse; }
-  .workspace-panel { flex: none; height: 590px; }
-  .palette-panel { flex: none; max-height: 390px; }
-  .palette-scroll { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; }
-  .tile-group + .tile-group { margin-top: 0; }
-  .tile-grid { grid-template-columns: repeat(10, minmax(32px, 1fr)); }
-  .red-grid { grid-template-columns: repeat(3, 40px); }
-  .palette-tile { height: 57px; }
+  .app-body { min-height: 0; padding: 10px; }
+  .workspace-panel { height: 100%; }
+  .palette-panel { top: 10px; bottom: 10px; left: 10px; max-height: none; }
 }
 
 @media (max-width: 650px) {
@@ -394,13 +392,13 @@ kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; bor
   .tool-group { padding-inline: 9px; }
   .font-ribbon { min-width: 254px; }
   .tool-button { min-height: 36px; }
-  .app-body { padding: 10px; gap: 10px; }
-  .workspace-panel { height: 555px; border-radius: 10px; }
+  .app-body { padding: 8px; }
+  .workspace-panel { height: 100%; border-radius: 10px; }
   .workspace-size-controls input { width: 56px; }
   .workspace-tile-ruler { margin-bottom: 4px; }
-  .workspace-scroll { padding: 8px; }
-  .palette-panel { border-radius: 10px; max-height: none; }
-  .palette-scroll { display: block; overflow: visible; }
+  .workspace-scroll { padding: 0; }
+  .palette-panel { top: 8px; bottom: 8px; left: 8px; border-radius: 10px; max-height: none; }
+  .palette-scroll { display: block; overflow-y: auto; }
   .tile-group + .tile-group { margin-top: 14px; }
   .tile-grid { grid-template-columns: repeat(10, minmax(27px, 1fr)); gap: 4px; }
   .palette-tile { height: 51px; padding: 2px; }
