@@ -372,17 +372,46 @@
 .saved-layout-empty span { color: #84958f; font-size: 11px; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(3, 25, 21, .7); backdrop-filter: blur(5px); animation: fade-in .2s ease-out; }
-.help-modal { width: min(570px, 100%); position: relative; padding: 35px 38px 30px; border-radius: 16px; background: #fbfaf4; box-shadow: 0 25px 80px rgba(0, 0, 0, .38); }
+.help-modal { width: min(820px, 100%); max-height: min(790px, calc(100vh - 32px)); position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; background: #fbfaf4; box-shadow: 0 25px 80px rgba(0, 0, 0, .38); }
 .help-modal::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; border-radius: 16px 0 0 16px; background: linear-gradient(#d6a64f, #b87a37); }
-.help-modal h2 { margin: 7px 0 23px; font-family: "Yu Mincho", serif; color: #143c32; font-size: 24px; }
+.help-header { flex: 0 0 auto; padding: 28px 44px 16px; border-bottom: 1px solid #dce6df; background: linear-gradient(120deg, #f7f5ec, #fffdf7); }
+.help-header .eyebrow { color: #a77b35; }
+.help-modal h2 { margin: 6px 0 7px; font-family: "Yu Mincho", serif; color: #143c32; font-size: 25px; }
+.help-header p { max-width: 630px; margin: 0; color: #698077; font-size: 12px; line-height: 1.7; }
 .modal-close { position: absolute; top: 13px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: #edf1ec; color: #61756f; cursor: pointer; font-size: 20px; }
+.help-index { flex: 0 0 auto; display: flex; gap: 6px; padding: 9px 44px; overflow-x: auto; border-bottom: 1px solid #e0e8e3; background: #eff4f0; scrollbar-width: thin; }
+.help-index a { flex: 0 0 auto; padding: 4px 8px; border-radius: 99px; color: #3f6559; font-size: 10px; font-weight: 800; text-decoration: none; }
+.help-index a:hover { background: #d7e9df; color: #124b3c; }
+.help-content { min-height: 0; overflow-y: auto; padding: 16px 44px 22px; scrollbar-color: #b9c8c1 transparent; scrollbar-width: thin; }
+.help-section { padding: 15px 0 17px; border-bottom: 1px solid #e1e8e3; scroll-margin-top: 8px; }
+.help-section:first-child { padding-top: 3px; }
+.help-section:last-child { padding-bottom: 0; border-bottom: 0; }
+.help-section-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.help-section-heading > span { width: 27px; height: 23px; display: grid; place-items: center; border-radius: 5px; color: #f8edcf; background: #174d40; font: 800 10px ui-monospace, monospace; letter-spacing: .04em; }
+.help-section-heading h3 { margin: 0; color: #244c41; font: 700 17px "Yu Mincho", serif; }
 .help-steps { display: grid; gap: 14px; }
 .help-steps > div { display: flex; align-items: center; gap: 14px; }
 .help-steps b { flex: 0 0 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; background: #12483d; color: #f2d49b; font: 700 14px "Yu Mincho", serif; }
 .help-steps p { margin: 0; display: grid; gap: 2px; }
 .help-steps strong { color: #244a40; font-size: 13px; }
 .help-steps span { color: #73837e; font-size: 11px; line-height: 1.5; }
-.shortcut-list { display: flex; flex-wrap: wrap; gap: 9px 16px; margin: 22px 0; padding: 12px; border-radius: 8px; background: #eef2ec; color: #63746e; font-size: 10px; }
+.help-steps.compact { gap: 10px; }
+.help-steps.compact > div { align-items: flex-start; }
+.help-steps.compact b { width: 25px; height: 25px; flex-basis: 25px; font-size: 12px; }
+.help-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.help-grid article { padding: 10px 11px; border: 1px solid #dbe6df; border-radius: 8px; background: #fff; }
+.help-grid strong { color: #245346; font-size: 11px; }
+.help-grid p { margin: 4px 0 0; color: #6a8078; font-size: 10px; line-height: 1.6; }
+.help-tip { display: flex; gap: 8px; margin-top: 10px; padding: 8px 10px; border-left: 3px solid #c3913d; border-radius: 0 6px 6px 0; background: #fff8e9; color: #78633b; font-size: 10px; line-height: 1.6; }
+.help-tip strong { flex: 0 0 auto; color: #9a6920; }
+.help-feature-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.help-feature-list > div { display: grid; gap: 3px; padding: 9px 10px; border-radius: 7px; background: #eef5f0; }
+.help-feature-list strong { color: #245346; font-size: 11px; }
+.help-feature-list span { color: #637970; font-size: 10px; line-height: 1.6; }
+.help-feature-list b { color: #a53d31; font-family: serif; font-size: 13px; }
+.shortcut-list { display: flex; flex-wrap: wrap; gap: 7px 9px; margin: 0; padding: 11px; border-radius: 8px; background: #eef2ec; color: #63746e; font-size: 10px; }
+.help-footer { flex: 0 0 auto; padding: 13px 44px 16px; border-top: 1px solid #dce6df; background: #f7f8f3; }
+.help-footer .primary-button { height: 40px; }
 kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; border-radius: 4px; background: #fff; color: #36564d; font: 600 9px ui-monospace, monospace; }
 .primary-button { width: 100%; height: 43px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #134d40, #0c372f); color: #fff8e8; cursor: pointer; font-weight: 700; letter-spacing: .06em; box-shadow: 0 6px 16px rgba(12, 55, 47, .22); }
 
@@ -424,7 +453,11 @@ kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; bor
   .palette-tile { height: 51px; padding: 2px; }
   .palette-tile img { height: 44px; }
   .red-grid { grid-template-columns: repeat(3, 36px); }
-  .help-modal { padding: 30px 23px 23px 27px; }
+  .help-modal { width: 100%; max-height: calc(100vh - 20px); }
+  .help-header { padding: 25px 28px 14px; }
+  .help-index { padding-inline: 28px; }
+  .help-content { padding: 14px 28px 18px; }
+  .help-footer { padding: 12px 28px 14px; }
   .saved-layouts-dialog { max-height: calc(100vh - 20px); }
   .saved-layouts-heading, .saved-layout-form { padding-inline: 18px; }
   .saved-layout-list { padding: 12px 18px 20px; }
@@ -432,6 +465,7 @@ kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; bor
   .saved-layout-preview { width: 112px; height: 72px; }
   .saved-layout-card-actions { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
   .help-modal h2 { font-size: 20px; }
+  .help-grid, .help-feature-list { grid-template-columns: 1fr; }
   .shortcut-list { display: grid; }
   .toast { left: 14px; right: 14px; bottom: 14px; text-align: center; }
 }
