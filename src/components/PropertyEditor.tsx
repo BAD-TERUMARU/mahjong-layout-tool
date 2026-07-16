@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import type { DrawingElement, ImageElement, SymbolElement, TextElement } from '../types'
 import { saveCustomColors } from '../utils/colors'
 
@@ -44,6 +44,12 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
   const [height, setHeight] = useState(element.kind === 'image' ? element.height : 180)
   const [opacity, setOpacity] = useState(element.kind === 'image' ? element.opacity : 1)
   const [customColors, setCustomColors] = useState(readCustomColors)
+
+  useEffect(() => {
+    const refreshCustomColors = () => setCustomColors(readCustomColors())
+    window.addEventListener('mahjong-custom-colors-changed', refreshCustomColors)
+    return () => window.removeEventListener('mahjong-custom-colors-changed', refreshCustomColors)
+  }, [])
 
   const updateCustomColors = (next: string[]) => {
     setCustomColors(next)
