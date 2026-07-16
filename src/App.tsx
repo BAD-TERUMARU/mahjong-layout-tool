@@ -745,6 +745,19 @@ const App = () => {
     setPropertyElementId(null)
   }
 
+  // ホームタブの色ボタンはプロパティ画面を経由せず、選択中の要素へ即時反映する。
+  // これにより、パレットをクリックしたときに編集パネルの開閉状態に左右されない。
+  const updateElementColor = (id: string, color: string) => {
+    history.commit({
+      ...scene,
+      elements: scene.elements.map((element) => {
+        if (element.id !== id || element.locked) return element
+        if (element.kind !== 'text' && element.kind !== 'symbol' && element.kind !== 'drawing') return element
+        return { ...element, color }
+      }),
+    })
+  }
+
   const openContextMenu = (state: ContextMenuState) => {
     if (state.elementId === null) {
       setContextMenu(state)
@@ -1011,6 +1024,10 @@ const App = () => {
         onEditSelectedText={() => selectedText && setEditTextRequest({ id: selectedText.id, token: Date.now() })}
         onUpdateTextStyle={(style) => {
           if (selectedText) {
+            if (style.color !== undefined) {
+              updateElementColor(selectedText.id, style.color)
+              return
+            }
             saveProperties(selectedText.id, style)
             return
           }
@@ -1020,7 +1037,7 @@ const App = () => {
             color: style.color ?? current.color,
           }))
         }}
-        onUpdateSelectedShapeColor={(color) => selectedSymbol && saveProperties(selectedSymbol.id, { color })}
+        onUpdateSelectedShapeColor={(color) => selectedSymbol && updateElementColor(selectedSymbol.id, color)}
         onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}
