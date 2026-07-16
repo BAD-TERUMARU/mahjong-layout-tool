@@ -1,11 +1,11 @@
 .app-shell { min-height: 100vh; background: radial-gradient(circle at 75% 20%, #f6f5ef 0, #e7ece7 46%, #dce5df 100%); }
 
 .app-header {
-  height: 86px;
+  height: 62px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 0 28px;
+  gap: 11px;
+  padding: 0 18px;
   color: #f9f6ea;
   background: linear-gradient(115deg, #072923 0%, #0d3a31 58%, #13493d 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -24,8 +24,8 @@
 }
 
 .brand-mark {
-  width: 48px;
-  height: 54px;
+  width: 34px;
+  height: 38px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(244, 213, 152, .55);
@@ -35,18 +35,18 @@
   color: #a6372b;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
   font-weight: 800;
-  font-size: 26px;
+  font-size: 19px;
 }
 
 .brand-copy { min-width: 0; }
-.eyebrow { display: block; color: #dcae5e; font-size: 10px; letter-spacing: .22em; font-weight: 800; }
-.brand-copy h1 { margin: 4px 0 0; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: clamp(19px, 2.2vw, 27px); letter-spacing: .055em; font-weight: 700; }
+.eyebrow { display: block; color: #dcae5e; font-size: 8px; letter-spacing: .18em; font-weight: 800; }
+.brand-copy h1 { margin: 1px 0 0; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: clamp(16px, 1.55vw, 19px); letter-spacing: .025em; font-weight: 700; }
 
-.header-status { margin-left: auto; display: flex; align-items: center; gap: 24px; }
-.header-status > span { color: #b9ccc5; font-size: 12px; display: flex; align-items: center; gap: 7px; }
+.header-status { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.header-status > span { color: #b9ccc5; font-size: 10px; display: flex; align-items: center; gap: 6px; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #78d6a3; box-shadow: 0 0 0 4px rgba(120, 214, 163, .12); }
-.header-status strong { font-family: "Yu Mincho", serif; font-size: 25px; color: #f7e4bd; }
-.header-status small { font: 500 11px Inter, sans-serif; color: #b9ccc5; margin-left: 5px; }
+.header-status strong { font-family: "Yu Mincho", serif; font-size: 20px; color: #f7e4bd; }
+.header-status small { font: 500 9px Inter, sans-serif; color: #b9ccc5; margin-left: 3px; }
 
 .toolbar {
   display: block;
@@ -56,16 +56,16 @@
   border-bottom: 1px solid var(--line);
   box-shadow: 0 5px 20px rgba(28, 55, 47, .08);
 }
-.ribbon-tabs { display: flex; align-items: end; gap: 2px; min-height: 34px; padding: 0 20px; overflow-x: auto; background: #edf3ef; border-bottom: 1px solid #d3dfd8; scrollbar-width: thin; }
-.ribbon-tabs button { flex: 0 0 auto; height: 31px; padding: 0 15px; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; color: #3e5d53; background: transparent; font: 700 11px Inter, "Yu Gothic UI", sans-serif; cursor: pointer; }
+.ribbon-tabs { display: flex; align-items: end; gap: 1px; min-height: 29px; padding: 0 12px; overflow-x: auto; background: #edf3ef; border-bottom: 1px solid #d3dfd8; scrollbar-width: thin; }
+.ribbon-tabs button { flex: 0 0 auto; height: 27px; padding: 0 11px; border: 1px solid transparent; border-bottom: 0; border-radius: 5px 5px 0 0; color: #3e5d53; background: transparent; font: 700 10px Inter, "Yu Gothic UI", sans-serif; cursor: pointer; }
 .ribbon-tabs button:hover { background: rgba(255, 255, 255, .65); }
 .ribbon-tabs button.active { position: relative; top: 1px; color: #174f40; background: rgba(251, 250, 244, .96); border-color: #d3dfd8; }
-.ribbon-content { display: flex; align-items: stretch; min-height: 82px; padding: 5px 20px 7px; overflow-x: auto; scrollbar-width: thin; }
+.ribbon-content { display: flex; align-items: stretch; min-height: 72px; padding: 4px 12px 6px; overflow-x: auto; scrollbar-width: thin; }
 
 .tool-group {
   flex: 0 0 auto;
-  min-height: 55px;
-  padding: 13px 12px 0;
+  min-height: 49px;
+  padding: 11px 9px 0;
   display: flex;
   gap: 5px;
   align-items: center;
@@ -74,7 +74,7 @@
 }
 .ribbon-content .tool-group:first-child { padding-left: 0; }
 .tool-group:last-child { border-right: 0; }
-.tool-group-label { position: absolute; top: 0; left: 12px; color: #84958f; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.tool-group-label { position: absolute; top: 0; left: 9px; color: #84958f; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
 .ribbon-content .tool-group:first-child .tool-group-label { left: 0; }
 
 .tool-button, .text-add-button {
@@ -98,8 +98,11 @@
 .tool-button.danger:hover:not(:disabled) { background: #f7e7e4; border-color: #e2bbb4; color: #a23b2d; }
 .tool-button:disabled, .text-add-button:disabled { opacity: .36; cursor: not-allowed; }
 
-.font-ribbon { align-self: stretch; display: grid; grid-template-columns: minmax(112px, 150px); grid-template-rows: 15px 30px auto; gap: 3px 5px; min-width: 154px; margin-left: 5px; padding-left: 10px; border-left: 1px solid rgba(21, 65, 55, .12); }
+.font-ribbon { align-self: stretch; display: grid; grid-template-columns: 112px 132px; grid-template-rows: 14px 29px 20px; gap: 3px 5px; min-width: 254px; margin-left: 5px; padding-left: 8px; border-left: 1px solid rgba(21, 65, 55, .12); }
 .font-ribbon-label { grid-column: 1 / -1; color: #84958f; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.font-ribbon select { grid-column: 1; grid-row: 2; }
+.font-ribbon-controls { grid-column: 2; grid-row: 2; }
+.text-color-palette { grid-column: 1 / -1; grid-row: 3; }
 .font-ribbon select, .font-ribbon input[type="number"] { height: 29px; border: 1px solid #cbd7d0; border-radius: 4px; padding: 0 6px; color: #31574d; background: #fff; font-size: 11px; }
 .font-ribbon select:disabled, .font-ribbon input:disabled, .font-ribbon button:disabled { opacity: .42; cursor: not-allowed; }
 .font-ribbon-controls { display: flex; align-items: center; gap: 3px; }
@@ -367,18 +370,18 @@ kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; bor
 }
 
 @media (max-width: 650px) {
-  .app-header { height: 70px; padding: 0 14px; gap: 10px; }
-  .brand-mark { width: 38px; height: 44px; font-size: 21px; }
-  .brand-copy h1 { font-size: 17px; letter-spacing: .02em; }
+  .app-header { height: 56px; padding: 0 12px; gap: 8px; }
+  .brand-mark { width: 31px; height: 34px; font-size: 17px; }
+  .brand-copy h1 { font-size: 15px; letter-spacing: .01em; }
   .brand-copy .eyebrow { font-size: 8px; }
   .header-status > span { display: none; }
   .header-status { gap: 0; }
   .header-status strong { font-size: 20px; }
-  .ribbon-tabs { padding-inline: 10px; }
-  .ribbon-tabs button { padding-inline: 12px; }
-  .ribbon-content { min-height: 82px; padding: 5px 10px 7px; }
+  .ribbon-tabs { min-height: 28px; padding-inline: 8px; }
+  .ribbon-tabs button { height: 26px; padding-inline: 10px; }
+  .ribbon-content { min-height: 72px; padding: 4px 8px 6px; }
   .tool-group { padding-inline: 9px; }
-  .font-ribbon { min-width: 150px; }
+  .font-ribbon { min-width: 254px; }
   .tool-button { min-height: 36px; }
   .app-body { padding: 10px; gap: 10px; }
   .workspace-panel { height: 555px; border-radius: 10px; }
