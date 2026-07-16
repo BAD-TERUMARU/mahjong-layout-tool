@@ -653,7 +653,17 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         const visualHeight = base.height * (element.scaleY ?? element.scale)
         const visualTransform = `translate(-50%, -50%) rotate(${element.rotation}deg)`
         return (
-          <button key={element.id} {...commonProps} aria-label={`${SYMBOL_LABELS[element.symbolType]}${element.selected ? '、選択中' : ''}${lockedLabel}`}>
+          <button
+            key={element.id}
+            {...commonProps}
+            onDoubleClick={(event) => {
+              event.stopPropagation()
+              if (!element.locked) {
+                window.requestAnimationFrame(() => propsRef.current.onSelectElement(element.id, false))
+              }
+            }}
+            aria-label={`${SYMBOL_LABELS[element.symbolType]}${element.selected ? '、選択中' : ''}${lockedLabel}`}
+          >
             {element.symbolType === 'triangle' ? (
               <svg
                 className="symbol-visual symbol-triangle"

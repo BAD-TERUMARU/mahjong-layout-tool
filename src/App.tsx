@@ -425,9 +425,16 @@ const App = () => {
   }
 
   const toggleTileFace = (id: string) => {
+    const target = scene.elements.find((element) => element.id === id)
+    if (!target || target.kind !== 'tile' || target.locked) return
+    const targetIds = new Set(
+      target.selected
+        ? scene.elements.filter((element) => element.kind === 'tile' && element.selected && !element.locked).map((element) => element.id)
+        : [id],
+    )
     history.commit({
       ...scene,
-      elements: scene.elements.map((element) => element.id === id && element.kind === 'tile' && !element.locked
+      elements: scene.elements.map((element) => element.kind === 'tile' && targetIds.has(element.id)
         ? { ...element, faceDown: !element.faceDown }
         : element),
     })
