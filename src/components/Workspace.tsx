@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -8,6 +9,7 @@ import {
 import { TILE_MAP } from '../data/tiles'
 import type {
   CanvasElement,
+  ContextMenuState,
   ElementPosition,
   PlacementMode,
   Scene,
@@ -44,21 +46,27 @@ interface WorkspaceProps {
   onSelectRange: (ids: string[], additive: boolean) => void
   onClearSelection: () => void
   onMoveElements: (positions: ElementPosition[]) => void
+  onDeleteDragged: (ids: string[]) => void
+  onTrashHover: (active: boolean) => void
   onPlaceSymbol: (symbolType: SymbolType, x: number, y: number) => void
   onCommitText: (text: string, x: number, y: number, id?: string) => void
   onFinishTextEditing: () => void
-  onPlacementComplete: () => void
+  onToggleTileFace: (id: string) => void
+  onOpenContextMenu: (state: ContextMenuState) => void
   onResize: (width: number, height: number) => void
   onBeginDrag: () => void
   onEndDrag: () => void
 }
 
 interface DragState {
+  pointerId: number
   startClientX: number
   startClientY: number
   primaryId: string
   starts: ElementPosition[]
   bounds: { left: number; top: number; right: number; bottom: number }
+  moved: boolean
+  inTrash: boolean
 }
 
 interface MarqueeState {
@@ -77,6 +85,16 @@ interface TextEditorState {
   value: string
 }
 
+const isPalettePoint = (clientX: number, clientY: number) => {
+  const palette = document.querySelector<HTMLElement>('.palette-panel')
+  if (!palette) return false
+  const bounds = palette.getBoundingClientRect()
+  return clientX >= bounds.left
+    && clientX <= bounds.right
+    && clientY >= bounds.top
+    && clientY <= bounds.bottom
+}
+
 const intersectionIds = (
   elements: CanvasElement[],
   left: number,
@@ -92,6 +110,8 @@ const intersectionIds = (
 }).map((element) => element.id)
 
 export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref) => {
+  const propsRef = useRef(props)
+  propsRef.current = props
   const dragRef = useRef<DragState | null>(null)
   const marqueeRef = useRef<MarqueeState | null>(null)
   const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null)
@@ -103,15 +123,17 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     const item = props.scene.elements.find(
       (element): element is TextElement => element.id === props.editTextRequest?.id && element.kind === 'text',
     )
-    if (item) setEditor({ id: item.id, x: item.x, y: item.y, value: item.text })
+    if (item && !item.locked) setEditor({ id: item.id, x: item.x, y: item.y, value: item.text })
   }, [props.editTextRequest, props.scene.elements])
 
   const beginElementDrag = (event: ReactPointerEvent<HTMLButtonElement>, element: CanvasElement) => {
     if (event.button !== 0) return
     event.stopPropagation()
-    event.currentTarget.setPointerCapture(event.pointerId)
+    props.onSelectElement(element.id, event.shiftKey)
+    if (element.locked) return
 
-    const selectedElements = props.scene.elements.filter((item) => item.selected)
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const selectedElements = props.scene.elements.filter((item) => item.selected && !item.locked)
     const group = element.selected
       ? selectedElements
       : event.shiftKey
@@ -129,44 +151,82 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity })
 
     dragRef.current = {
+      pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
       primaryId: element.id,
       starts: uniqueGroup.map((item) => ({ id: item.id, x: item.x, y: item.y })),
       bounds,
+      moved: false,
+      inTrash: false,
     }
     props.onBeginDrag()
-    props.onSelectElement(element.id, event.shiftKey)
   }
 
-  const moveElementDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const moveElementDrag = useCallback((clientX: number, clientY: number) => {
+    const currentProps = propsRef.current
     const drag = dragRef.current
     if (!drag) return
+    if (!drag.moved && Math.hypot(clientX - drag.startClientX, clientY - drag.startClientY) <= 3) return
+    drag.moved = true
+
+    const inTrash = isPalettePoint(clientX, clientY)
+    if (inTrash) {
+      if (!drag.inTrash) currentProps.onMoveElements(drag.starts)
+      drag.inTrash = true
+      currentProps.onTrashHover(true)
+      return
+    }
+    if (drag.inTrash) {
+      drag.inTrash = false
+      currentProps.onTrashHover(false)
+    }
+
     const primary = drag.starts.find((item) => item.id === drag.primaryId)
     if (!primary) return
+    const rawX = primary.x + clientX - drag.startClientX
+    const rawY = primary.y + clientY - drag.startClientY
+    let deltaX = snap(rawX, currentProps.snapToGrid) - primary.x
+    let deltaY = snap(rawY, currentProps.snapToGrid) - primary.y
+    deltaX = clamp(deltaX, -drag.bounds.left, currentProps.scene.width - drag.bounds.right)
+    deltaY = clamp(deltaY, -drag.bounds.top, currentProps.scene.height - drag.bounds.bottom)
 
-    const rawX = primary.x + event.clientX - drag.startClientX
-    const rawY = primary.y + event.clientY - drag.startClientY
-    let deltaX = snap(rawX, props.snapToGrid) - primary.x
-    let deltaY = snap(rawY, props.snapToGrid) - primary.y
-    deltaX = clamp(deltaX, -drag.bounds.left, props.scene.width - drag.bounds.right)
-    deltaY = clamp(deltaY, -drag.bounds.top, props.scene.height - drag.bounds.bottom)
-
-    props.onMoveElements(drag.starts.map((item) => ({
+    currentProps.onMoveElements(drag.starts.map((item) => ({
       id: item.id,
       x: Math.round(item.x + deltaX),
       y: Math.round(item.y + deltaY),
     })))
-  }
+  }, [])
 
-  const endElementDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!dragRef.current) return
+  const endElementDrag = useCallback((clientX: number, clientY: number) => {
+    const currentProps = propsRef.current
+    const drag = dragRef.current
+    if (!drag) return
+    const droppedInTrash = drag.moved && (drag.inTrash || isPalettePoint(clientX, clientY))
+    if (droppedInTrash) currentProps.onMoveElements(drag.starts)
     dragRef.current = null
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
+    currentProps.onTrashHover(false)
+    currentProps.onEndDrag()
+    if (droppedInTrash) currentProps.onDeleteDragged(drag.starts.map((item) => item.id))
+  }, [])
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (dragRef.current?.pointerId === event.pointerId) moveElementDrag(event.clientX, event.clientY)
     }
-    props.onEndDrag()
-  }
+    const handlePointerEnd = (event: PointerEvent) => {
+      if (dragRef.current?.pointerId === event.pointerId) endElementDrag(event.clientX, event.clientY)
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerEnd)
+    window.addEventListener('pointercancel', handlePointerEnd)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerEnd)
+      window.removeEventListener('pointercancel', handlePointerEnd)
+    }
+  }, [moveElementDrag, endElementDrag])
 
   const canvasPoint = (event: ReactPointerEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -228,7 +288,6 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       setEditor({ x: state.startX, y: state.startY, value: '' })
     } else if (props.placementMode !== 'select') {
       props.onPlaceSymbol(props.placementMode, state.startX, state.startY)
-      props.onPlacementComplete()
     } else {
       props.onClearSelection()
     }
@@ -240,7 +299,6 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     if (!cancelled && text) props.onCommitText(text, editor.x, editor.y, editor.id)
     setEditor(null)
     props.onFinishTextEditing()
-    props.onPlacementComplete()
   }
 
   const beginResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -274,6 +332,32 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     props.onEndDrag()
   }
 
+  const openContextMenu = (event: React.MouseEvent<HTMLButtonElement>, element: CanvasElement) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const canvas = event.currentTarget.closest('.workspace-canvas')?.getBoundingClientRect()
+    if (!canvas) return
+    props.onOpenContextMenu({
+      elementId: element.id,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      canvasX: clamp(event.clientX - canvas.left, 0, props.scene.width),
+      canvasY: clamp(event.clientY - canvas.top, 0, props.scene.height),
+    })
+  }
+
+  const openWorkspaceContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const canvas = event.currentTarget.getBoundingClientRect()
+    props.onOpenContextMenu({
+      elementId: null,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      canvasX: clamp(event.clientX - canvas.left, 0, props.scene.width),
+      canvasY: clamp(event.clientY - canvas.top, 0, props.scene.height),
+    })
+  }
+
   const marqueeStyle = marquee ? {
     left: Math.min(marquee.startX, marquee.currentX),
     top: Math.min(marquee.startY, marquee.currentY),
@@ -303,6 +387,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         const bounds = event.currentTarget.getBoundingClientRect()
         props.onDropTile(tileId, event.clientX - bounds.left - TILE_WIDTH / 2, event.clientY - bounds.top - TILE_HEIGHT / 2)
       }}
+      onContextMenu={openWorkspaceContextMenu}
       aria-label="麻雀牌・文字・記号の作業エリア"
     >
       {props.scene.elements.length === 0 && !editor && (
@@ -314,9 +399,10 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
 
       {props.scene.elements.map((element) => {
         const dimensions = getElementDimensions(element)
+        const lockedLabel = element.locked ? '、ロック中' : ''
         const commonProps = {
           type: 'button' as const,
-          className: `placed-item placed-${element.kind}${element.selected ? ' selected' : ''}`,
+          className: `placed-item placed-${element.kind}${element.selected ? ' selected' : ''}${element.locked ? ' locked' : ''}`,
           style: {
             left: element.x,
             top: element.y,
@@ -325,22 +411,34 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
             height: dimensions.height,
           },
           onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => beginElementDrag(event, element),
-          onPointerMove: moveElementDrag,
-          onPointerUp: endElementDrag,
-          onPointerCancel: endElementDrag,
+          onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => openContextMenu(event, element),
         }
 
         if (element.kind === 'tile') {
           const tile = TILE_MAP.get(element.tileId)
           if (!tile) return null
           return (
-            <button key={element.id} {...commonProps} aria-label={`${tile.label}${element.selected ? '、選択中' : ''}`}>
-              <img
-                src={tile.asset}
-                alt={tile.label}
-                draggable={false}
-                style={{ transform: `translate(-50%, -50%) rotate(${element.rotation}deg)` }}
-              />
+            <button
+              key={element.id}
+              {...commonProps}
+              className={`${commonProps.className}${element.faceDown ? ' face-down' : ''}`}
+              onDoubleClick={(event) => {
+                event.stopPropagation()
+                if (!element.locked) props.onToggleTileFace(element.id)
+              }}
+              aria-label={`${tile.label}${element.faceDown ? '、裏向き' : ''}${element.selected ? '、選択中' : ''}${lockedLabel}`}
+            >
+              {element.faceDown ? (
+                <span className="tile-back" style={{ transform: `translate(-50%, -50%) rotate(${element.rotation}deg)` }} />
+              ) : (
+                <img
+                  src={tile.asset}
+                  alt={tile.label}
+                  draggable={false}
+                  style={{ transform: `translate(-50%, -50%) rotate(${element.rotation}deg)` }}
+                />
+              )}
+              {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
             </button>
           )
         }
@@ -353,8 +451,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
               key={element.id}
               {...commonProps}
               className={`${commonProps.className}${editor?.id === element.id ? ' editing' : ''}`}
-              onDoubleClick={() => setEditor({ id: element.id, x: element.x, y: element.y, value: element.text })}
-              aria-label={`文字「${element.text}」${element.selected ? '、選択中' : ''}`}
+              onDoubleClick={() => !element.locked && setEditor({ id: element.id, x: element.x, y: element.y, value: element.text })}
+              aria-label={`文字「${element.text}」${element.selected ? '、選択中' : ''}${lockedLabel}`}
             >
               <span
                 className="text-visual"
@@ -366,21 +464,40 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
                   transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
                 }}
               >{element.text}</span>
+              {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
             </button>
           )
         }
 
         const base = getSymbolBaseDimensions(element.symbolType)
+        const visualWidth = base.width * element.scale
+        const visualHeight = base.height * element.scale
+        const visualTransform = `translate(-50%, -50%) rotate(${element.rotation}deg)`
         return (
-          <button key={element.id} {...commonProps} aria-label={`${SYMBOL_LABELS[element.symbolType]}${element.selected ? '、選択中' : ''}`}>
-            <span
-              className={`symbol-visual symbol-${element.symbolType}`}
-              style={{
-                width: base.width,
-                height: base.height,
-                transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
-              }}
-            >{element.symbolType === 'cross' ? '✕' : ''}</span>
+          <button key={element.id} {...commonProps} aria-label={`${SYMBOL_LABELS[element.symbolType]}${element.selected ? '、選択中' : ''}${lockedLabel}`}>
+            {element.symbolType === 'triangle' ? (
+              <svg
+                className="symbol-visual symbol-triangle"
+                viewBox="0 0 99 66"
+                style={{ width: visualWidth, height: visualHeight, transform: visualTransform }}
+                aria-hidden="true"
+              >
+                <polygon points="49.5,5 94,61 5,61" fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <span
+                className={`symbol-visual symbol-${element.symbolType}`}
+                style={{
+                  width: visualWidth,
+                  height: visualHeight,
+                  transform: visualTransform,
+                  color: element.color,
+                  borderWidth: element.symbolType === 'rectangle' || element.symbolType === 'circle' ? element.strokeWidth : undefined,
+                  fontSize: element.symbolType === 'cross' ? 49 * element.scale : undefined,
+                }}
+              >{element.symbolType === 'cross' ? '✕' : ''}</span>
+            )}
+            {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
           </button>
         )
       })}

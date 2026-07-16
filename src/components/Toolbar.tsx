@@ -7,6 +7,7 @@ interface ToolbarProps {
   hasItems: boolean
   hasSelection: boolean
   canEditText: boolean
+  canDuplicate: boolean
   showGrid: boolean
   snapToGrid: boolean
   screenshotGrid: boolean
@@ -16,6 +17,7 @@ interface ToolbarProps {
   onRedo: () => void
   onAlign: () => void
   onDeleteSelected: () => void
+  onDuplicate: () => void
   onRotate: () => void
   onEditSelectedText: () => void
   onRandomHand: (count: 13 | 14) => void
@@ -25,6 +27,7 @@ interface ToolbarProps {
   onToggleSnap: () => void
   onSaveLocal: () => void
   onLoadLocal: () => void
+  onOpenSavedLayouts: () => void
   onExportJson: () => void
   onImportJson: () => void
   onAddText: (text: string) => void
@@ -77,6 +80,7 @@ export const Toolbar = (props: ToolbarProps) => {
         <ToolButton label="元に戻す" icon="↶" onClick={props.onUndo} disabled={!props.canUndo} />
         <ToolButton label="やり直す" icon="↷" onClick={props.onRedo} disabled={!props.canRedo} />
         <ToolButton label="牌を整列" icon="≡" onClick={props.onAlign} disabled={!props.hasItems} />
+        <ToolButton label="複製" icon="⧉" onClick={props.onDuplicate} disabled={!props.canDuplicate} />
         <ToolButton label="回転" icon="↻" onClick={props.onRotate} disabled={!props.hasSelection} />
         <ToolButton label="文字編集" icon="Aa" onClick={props.onEditSelectedText} disabled={!props.canEditText} />
         <ToolButton label="選択を削除" icon="⌫" onClick={props.onDeleteSelected} disabled={!props.hasSelection} />
@@ -84,10 +88,11 @@ export const Toolbar = (props: ToolbarProps) => {
       </div>
 
       <div className="tool-group placement-tools">
-        <span className="tool-group-label">配置</span>
+        <span className="tool-group-label">配置（Escで解除）</span>
         <ToolButton label="選択" icon="↖" onClick={() => props.onSetPlacementMode('select')} active={props.placementMode === 'select'} />
         <ToolButton label="クリック文字" icon="T" onClick={() => props.onSetPlacementMode('text')} active={props.placementMode === 'text'} />
         <ToolButton label="長方形" icon="▭" onClick={() => props.onSetPlacementMode('rectangle')} active={props.placementMode === 'rectangle'} />
+        <ToolButton label="三角形" icon="△" onClick={() => props.onSetPlacementMode('triangle')} active={props.placementMode === 'triangle'} />
         <ToolButton label="バツ" icon="✕" onClick={() => props.onSetPlacementMode('cross')} active={props.placementMode === 'cross'} />
         <ToolButton label="丸" icon="〇" onClick={() => props.onSetPlacementMode('circle')} active={props.placementMode === 'circle'} />
       </div>
@@ -123,6 +128,7 @@ export const Toolbar = (props: ToolbarProps) => {
         <span className="tool-group-label">保存</span>
         <ToolButton label="ブラウザ保存" icon="↓" onClick={props.onSaveLocal} />
         <ToolButton label="復元" icon="↑" onClick={props.onLoadLocal} />
+        <ToolButton label="保存ページ" icon="▤" onClick={props.onOpenSavedLayouts} />
         <ToolButton label="JSON書出" icon="{}" onClick={props.onExportJson} />
         <ToolButton label="JSON読込" icon="…" onClick={props.onImportJson} />
       </div>

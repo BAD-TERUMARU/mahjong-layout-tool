@@ -17,13 +17,14 @@ export const DEFAULT_WORKSPACE_WIDTH = 900
 export const DEFAULT_WORKSPACE_HEIGHT = 560
 export const MIN_WORKSPACE_WIDTH = 520
 export const MIN_WORKSPACE_HEIGHT = 320
-export const MAX_WORKSPACE_WIDTH = 2400
-export const MAX_WORKSPACE_HEIGHT = 1600
+export const MAX_WORKSPACE_WIDTH = 10000
+export const MAX_WORKSPACE_HEIGHT = 3000
 
 export const SYMBOL_LABELS: Record<SymbolType, string> = {
   rectangle: '長方形（牌3枚分）',
   cross: 'バツ（牌1枚分）',
   circle: '丸（牌2枚分）',
+  triangle: '三角形（牌2枚分）',
 }
 
 export const createId = (prefix: string) =>
@@ -40,7 +41,9 @@ const rotateDimensions = (width: number, height: number, rotation: Rotation) =>
 
 export const getSymbolBaseDimensions = (symbolType: SymbolType) => {
   if (symbolType === 'rectangle') return { width: TILE_WIDTH * 3 + TILE_GAP * 2, height: TILE_HEIGHT }
-  if (symbolType === 'circle') return { width: TILE_WIDTH * 2 + TILE_GAP, height: TILE_HEIGHT }
+  if (symbolType === 'circle' || symbolType === 'triangle') {
+    return { width: TILE_WIDTH * 2 + TILE_GAP, height: TILE_HEIGHT }
+  }
   return { width: TILE_WIDTH, height: TILE_HEIGHT }
 }
 
@@ -48,7 +51,7 @@ export const getElementDimensions = (element: CanvasElement) => {
   if (element.kind === 'tile') return rotateDimensions(TILE_WIDTH, TILE_HEIGHT, element.rotation)
   if (element.kind === 'symbol') {
     const dimensions = getSymbolBaseDimensions(element.symbolType)
-    return rotateDimensions(dimensions.width, dimensions.height, element.rotation)
+    return rotateDimensions(dimensions.width * element.scale, dimensions.height * element.scale, element.rotation)
   }
   const width = Math.max(44, Math.ceil(element.text.length * element.fontSize * 1.05) + 16)
   const height = Math.ceil(element.fontSize * 1.5) + 8
@@ -84,12 +87,14 @@ const makeBase = (prefix: string, x: number, y: number, zIndex: number) => ({
   rotation: 0 as Rotation,
   selected: false,
   zIndex,
+  locked: false,
 })
 
 export const makeTile = (tileId: string, x: number, y: number, zIndex: number): TileElement => ({
   ...makeBase('tile', x, y, zIndex),
   kind: 'tile',
   tileId,
+  faceDown: false,
 })
 
 export const makeText = (text: string, x: number, y: number, zIndex: number): TextElement => ({
@@ -104,6 +109,9 @@ export const makeSymbol = (symbolType: SymbolType, x: number, y: number, zIndex:
   ...makeBase('symbol', x, y, zIndex),
   kind: 'symbol',
   symbolType,
+  color: symbolType === 'cross' ? '#b13f34' : '#244a40',
+  strokeWidth: 4,
+  scale: 1,
 })
 
 export const getSceneContentBounds = (scene: Scene) => {
