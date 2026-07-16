@@ -8,6 +8,7 @@ interface ToolbarProps {
   hasSelection: boolean
   canEditText: boolean
   canDuplicate: boolean
+  canEditProperties: boolean
   showGrid: boolean
   snapToGrid: boolean
   screenshotGrid: boolean
@@ -20,6 +21,7 @@ interface ToolbarProps {
   onDuplicate: () => void
   onRotate: () => void
   onEditSelectedText: () => void
+  onEditProperties: () => void
   onRandomHand: (count: 13 | 14) => void
   onShuffle: () => void
   onSetPlacementMode: (mode: PlacementMode) => void
@@ -30,6 +32,7 @@ interface ToolbarProps {
   onOpenSavedLayouts: () => void
   onExportJson: () => void
   onImportJson: () => void
+  onAddImage: () => void
   onAddText: (text: string) => void
   onScreenshot: () => void
   onToggleScreenshotGrid: () => void
@@ -83,6 +86,7 @@ export const Toolbar = (props: ToolbarProps) => {
         <ToolButton label="複製" icon="⧉" onClick={props.onDuplicate} disabled={!props.canDuplicate} />
         <ToolButton label="回転" icon="↻" onClick={props.onRotate} disabled={!props.hasSelection} />
         <ToolButton label="文字編集" icon="Aa" onClick={props.onEditSelectedText} disabled={!props.canEditText} />
+        <ToolButton label="スタイル" icon="🎨" onClick={props.onEditProperties} disabled={!props.canEditProperties} />
         <ToolButton label="選択を削除" icon="⌫" onClick={props.onDeleteSelected} disabled={!props.hasSelection} />
         <ToolButton label="すべて削除" icon="×" onClick={props.onClear} disabled={!props.hasItems} danger />
       </div>
@@ -91,6 +95,7 @@ export const Toolbar = (props: ToolbarProps) => {
         <span className="tool-group-label">配置（Escで解除）</span>
         <ToolButton label="選択" icon="↖" onClick={() => props.onSetPlacementMode('select')} active={props.placementMode === 'select'} />
         <ToolButton label="クリック文字" icon="T" onClick={() => props.onSetPlacementMode('text')} active={props.placementMode === 'text'} />
+        <ToolButton label="線を描く" icon="✎" onClick={() => props.onSetPlacementMode('draw')} active={props.placementMode === 'draw'} />
         <ToolButton label="長方形" icon="▭" onClick={() => props.onSetPlacementMode('rectangle')} active={props.placementMode === 'rectangle'} />
         <ToolButton label="三角形" icon="△" onClick={() => props.onSetPlacementMode('triangle')} active={props.placementMode === 'triangle'} />
         <ToolButton label="バツ" icon="✕" onClick={() => props.onSetPlacementMode('cross')} active={props.placementMode === 'cross'} />
@@ -135,6 +140,7 @@ export const Toolbar = (props: ToolbarProps) => {
 
       <div className="tool-group">
         <span className="tool-group-label">画像</span>
+        <ToolButton label="画像追加" icon="▧" onClick={props.onAddImage} />
         <label className="capture-grid-toggle">
           <input type="checkbox" checked={props.screenshotGrid} onChange={props.onToggleScreenshotGrid} />
           PNGにグリッド

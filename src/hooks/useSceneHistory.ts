@@ -11,6 +11,7 @@ interface HistoryState {
 
 type Action =
   | { type: 'commit'; scene: Scene }
+  | { type: 'commit-latest'; update: (scene: Scene) => Scene }
   | { type: 'live'; scene: Scene }
   | { type: 'begin' }
   | { type: 'end' }
@@ -30,6 +31,16 @@ const reducer = (state: HistoryState, action: Action): HistoryState => {
         future: [],
         transactionStart: null,
       }
+    case 'commit-latest': {
+      const scene = action.update(state.present)
+      if (scenesEqual(state.present, scene)) return state
+      return {
+        past: [...state.past, state.present].slice(-LIMIT),
+        present: scene,
+        future: [],
+        transactionStart: null,
+      }
+    }
     case 'live':
       return { ...state, present: action.scene }
     case 'begin':
@@ -81,6 +92,7 @@ export const useSceneHistory = (initialScene: Scene) => {
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
     commit: (scene: Scene) => dispatch({ type: 'commit', scene }),
+    commitLatest: (update: (scene: Scene) => Scene) => dispatch({ type: 'commit-latest', update }),
     updateLive: (scene: Scene) => dispatch({ type: 'live', scene }),
     beginTransaction: () => dispatch({ type: 'begin' }),
     endTransaction: () => dispatch({ type: 'end' }),

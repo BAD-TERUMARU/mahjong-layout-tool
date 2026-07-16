@@ -13,8 +13,11 @@ import { TILE_MAP } from './data/tiles'
 import { useSceneHistory } from './hooks/useSceneHistory'
 import type {
   CanvasElement,
+  CanvasPoint,
   ContextMenuState,
+  DrawingElement,
   ElementPosition,
+  ImageElement,
   NamedSavedLayout,
   PlacementMode,
   Rotation,
@@ -41,6 +44,8 @@ import {
   getElementDimensions,
   getSceneContentBounds,
   makeSymbol,
+  makeDrawing,
+  makeImage,
   makeText,
   makeTile,
   randomHand,
@@ -84,7 +89,15 @@ const parseElement = (value: unknown): CanvasElement | null => {
     locked: Boolean(item.locked),
   }
   if (item.kind === 'tile' && typeof item.tileId === 'string' && TILE_MAP.has(item.tileId)) {
-    return { ...base, kind: 'tile', tileId: item.tileId, faceDown: Boolean(item.faceDown) }
+    return {
+      ...base,
+      kind: 'tile',
+      tileId: item.tileId,
+      faceDown: Boolean(item.faceDown),
+      autoX: typeof item.autoX === 'number' ? Math.round(item.autoX) : base.x,
+      autoY: typeof item.autoY === 'number' ? Math.round(item.autoY) : base.y,
+      autoOrder: typeof item.autoOrder === 'number' ? item.autoOrder : base.zIndex,
+    }
   }
   if (item.kind === 'text' && typeof item.text === 'string') {
     return {
@@ -93,6 +106,7 @@ const parseElement = (value: unknown): CanvasElement | null => {
       text: item.text,
       color: normalizeTextColor(item.color),
       fontSize: typeof item.fontSize === 'number' ? clamp(item.fontSize, 12, 72) : 22,
+      fontFamily: typeof item.fontFamily === 'string' ? item.fontFamily : 'serif',
     }
   }
   if (item.kind === 'symbol' && isSymbolType(item.symbolType)) {
@@ -103,6 +117,36 @@ const parseElement = (value: unknown): CanvasElement | null => {
       color: typeof item.color === 'string' ? item.color : item.symbolType === 'cross' ? '#b13f34' : '#244a40',
       strokeWidth: typeof item.strokeWidth === 'number' ? clamp(item.strokeWidth, 1, 12) : 4,
       scale: typeof item.scale === 'number' ? clamp(item.scale, 0.5, 3) : 1,
+    }
+  }
+  if (item.kind === 'drawing' && Array.isArray(item.points)) {
+    const points = item.points.flatMap((point) => {
+      if (!point || typeof point !== 'object') return []
+      const value = point as Record<string, unknown>
+      return typeof value.x === 'number' && typeof value.y === 'number'
+        ? [{ x: value.x, y: value.y }]
+        : []
+    })
+    if (points.length < 2) return null
+    return {
+      ...base,
+      kind: 'drawing',
+      points,
+      width: clamp(typeof item.width === 'number' ? item.width : 20, 8, MAX_WORKSPACE_WIDTH),
+      height: clamp(typeof item.height === 'number' ? item.height : 20, 8, MAX_WORKSPACE_HEIGHT),
+      color: typeof item.color === 'string' ? item.color : '#244a40',
+      strokeWidth: clamp(typeof item.strokeWidth === 'number' ? item.strokeWidth : 4, 1, 20),
+    }
+  }
+  if (item.kind === 'image' && typeof item.src === 'string') {
+    return {
+      ...base,
+      kind: 'image',
+      src: item.src,
+      name: typeof item.name === 'string' ? item.name : '貼り付け画像',
+      width: clamp(typeof item.width === 'number' ? item.width : 240, 32, MAX_WORKSPACE_WIDTH),
+      height: clamp(typeof item.height === 'number' ? item.height : 180, 32, MAX_WORKSPACE_HEIGHT),
+      opacity: clamp(typeof item.opacity === 'number' ? item.opacity : 1, 0.1, 1),
     }
   }
   return null
@@ -194,6 +238,37 @@ const downloadBlob = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url)
 }
 
+const loadImageFile = (file: File) => new Promise<{ src: string; width: number; height: number }>((resolve, reject) => {
+  if (!file.type.startsWith('image/')) {
+    reject(new Error('not-image'))
+    return
+  }
+  const url = URL.createObjectURL(file)
+  const image = new Image()
+  image.onload = () => {
+    URL.revokeObjectURL(url)
+    const scale = Math.min(1, 1400 / Math.max(image.naturalWidth, image.naturalHeight))
+    const width = Math.max(1, Math.round(image.naturalWidth * scale))
+    const height = Math.max(1, Math.round(image.naturalHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    if (!context) {
+      reject(new Error('canvas'))
+      return
+    }
+    context.drawImage(image, 0, 0, width, height)
+    const format = file.type === 'image/png' ? 'image/png' : 'image/webp'
+    resolve({ src: canvas.toDataURL(format, 0.88), width, height })
+  }
+  image.onerror = () => {
+    URL.revokeObjectURL(url)
+    reject(new Error('load'))
+  }
+  image.src = url
+})
+
 const App = () => {
   const [initialLayout] = useState(() => parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY)))
   const history = useSceneHistory(initialLayout?.scene ?? EMPTY_SCENE)
@@ -213,6 +288,9 @@ const App = () => {
   const [toast, setToast] = useState('')
   const workspaceRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const imageAnchorRef = useRef<{ x: number; y: number } | null>(null)
+  const autoSaveWarningShownRef = useRef(false)
   const toastTimerRef = useRef<number | null>(null)
 
   const notify = (message: string) => {
@@ -229,34 +307,59 @@ const App = () => {
   })
 
   useEffect(() => {
-    localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify({
-      version: 3,
-      savedAt: new Date().toISOString(),
-      scene,
-      settings: { showGrid, snapToGrid },
-    } satisfies SavedLayout))
+    try {
+      localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify({
+        version: 3,
+        savedAt: new Date().toISOString(),
+        scene,
+        settings: { showGrid, snapToGrid },
+      } satisfies SavedLayout))
+      autoSaveWarningShownRef.current = false
+    } catch {
+      if (!autoSaveWarningShownRef.current) {
+        autoSaveWarningShownRef.current = true
+        setToast('保存容量が不足しています。画像を小さくするか不要な配置を削除してください')
+      }
+    }
   }, [scene, showGrid, snapToGrid])
 
   const nextZIndex = () => Math.max(0, ...scene.elements.map((element) => element.zIndex)) + 1
 
   const addTile = (tileId: string, dropX?: number, dropY?: number) => {
-    const tileCount = scene.elements.filter((element) => element.kind === 'tile').length
-    const defaultX = 24 + tileCount * (TILE_WIDTH + TILE_GAP)
-    const x = dropX ?? defaultX
-    const y = dropY ?? 32
+    const isDropped = dropX !== undefined || dropY !== undefined
+    const latestAutoTile = scene.elements
+      .filter((element): element is TileElement => element.kind === 'tile' && element.autoOrder !== undefined)
+      .reduce<TileElement | null>((latest, tile) => !latest || (tile.autoOrder ?? -1) > (latest.autoOrder ?? -1) ? tile : latest, null)
+    const defaultX = latestAutoTile ? (latestAutoTile.autoX ?? latestAutoTile.x) + TILE_WIDTH + TILE_GAP : 24
+    const defaultY = latestAutoTile ? (latestAutoTile.autoY ?? latestAutoTile.y) : 32
+    let x = dropX ?? defaultX
+    const y = dropY ?? defaultY
+
+    if (!isDropped) {
+      const overlapsTile = (candidateX: number) => scene.elements.some((element) => element.kind === 'tile'
+        && candidateX < element.x + TILE_WIDTH
+        && candidateX + TILE_WIDTH > element.x
+        && y < element.y + TILE_HEIGHT
+        && y + TILE_HEIGHT > element.y)
+      while (overlapsTile(x)) x += TILE_WIDTH + TILE_GAP
+    }
+
     const width = clamp(Math.max(scene.width, x + TILE_WIDTH + 24), MIN_WORKSPACE_WIDTH, MAX_WORKSPACE_WIDTH)
+    const tile = makeTile(
+      tileId,
+      clamp(isDropped ? snap(x, snapToGrid) : x, 0, width - TILE_WIDTH),
+      clamp(isDropped ? snap(y, snapToGrid) : y, 0, scene.height - TILE_HEIGHT),
+      nextZIndex(),
+    )
+    if (isDropped) {
+      delete tile.autoX
+      delete tile.autoY
+      delete tile.autoOrder
+    }
     history.commit({
       ...scene,
       width,
-      elements: [
-        ...scene.elements,
-        makeTile(
-          tileId,
-          clamp(snap(x, snapToGrid), 0, width - TILE_WIDTH),
-          clamp(snap(y, snapToGrid), 0, scene.height - TILE_HEIGHT),
-          nextZIndex(),
-        ),
-      ],
+      elements: [...scene.elements, tile],
     })
   }
 
@@ -429,6 +532,50 @@ const App = () => {
     history.commit({ ...scene, elements: [...scene.elements, item] })
   }
 
+  const commitDrawing = (points: CanvasPoint[]) => {
+    if (points.length < 2) return
+    const minX = Math.min(...points.map((point) => point.x))
+    const minY = Math.min(...points.map((point) => point.y))
+    const maxX = Math.max(...points.map((point) => point.x))
+    const maxY = Math.max(...points.map((point) => point.y))
+    const padding = 8
+    const x = clamp(Math.floor(minX - padding), 0, scene.width)
+    const y = clamp(Math.floor(minY - padding), 0, scene.height)
+    const width = Math.max(16, Math.min(scene.width - x, Math.ceil(maxX - x + padding)))
+    const height = Math.max(16, Math.min(scene.height - y, Math.ceil(maxY - y + padding)))
+    const relative = points.map((point) => ({ x: point.x - x, y: point.y - y }))
+    history.commit({ ...scene, elements: [...scene.elements, makeDrawing(relative, x, y, width, height, nextZIndex())] })
+  }
+
+  const addImageFile = async (file: File, anchor?: { x: number; y: number } | null) => {
+    try {
+      const loaded = await loadImageFile(file)
+      const displayScale = Math.min(1, 360 / loaded.width, 260 / loaded.height)
+      const width = Math.max(32, Math.round(loaded.width * displayScale))
+      const height = Math.max(32, Math.round(loaded.height * displayScale))
+      history.commitLatest((latestScene) => {
+        const centerX = anchor?.x ?? latestScene.width / 2
+        const centerY = anchor?.y ?? latestScene.height / 2
+        const x = clamp(centerX - width / 2, 0, latestScene.width - width)
+        const y = clamp(centerY - height / 2, 0, latestScene.height - height)
+        const zIndex = Math.max(0, ...latestScene.elements.map((element) => element.zIndex)) + 1
+        const item = makeImage(loaded.src, file.name || '貼り付け画像', width, height, x, y, zIndex)
+        return {
+          ...latestScene,
+          elements: [...latestScene.elements.map((element) => ({ ...element, selected: false })), { ...item, selected: true }],
+        }
+      })
+      notify('画像をWorkspaceへ追加しました')
+    } catch {
+      notify('画像を読み込めませんでした')
+    }
+  }
+
+  const requestImage = (anchor?: { x: number; y: number }) => {
+    imageAnchorRef.current = anchor ?? null
+    imageInputRef.current?.click()
+  }
+
   const duplicateSelected = () => {
     const sources = scene.elements.filter((element) => element.selected)
     if (!sources.length) return
@@ -443,6 +590,9 @@ const App = () => {
         selected: true,
         locked: false,
         zIndex: zStart + index,
+        // 複製は手動配置として扱う。自動配置の続き位置を変えないため、
+        // 元の牌が持つ自動配置スロットは引き継がない。
+        ...(source.kind === 'tile' ? { autoX: undefined, autoY: undefined, autoOrder: undefined } : {}),
       }
     }) as CanvasElement[]
     history.commit({
@@ -459,7 +609,7 @@ const App = () => {
   }
 
   const pasteClipboard = (anchor?: { x: number; y: number }) => {
-    if (!clipboard.length) return
+    if (!clipboard.length) return false
     const minX = Math.min(...clipboard.map((element) => element.x))
     const minY = Math.min(...clipboard.map((element) => element.y))
     const offsetX = anchor ? anchor.x - minX : 20
@@ -475,12 +625,15 @@ const App = () => {
         selected: true,
         locked: false,
         zIndex: zStart + index,
+        // 貼り付けも自動配置の連番には参加させない。
+        ...(source.kind === 'tile' ? { autoX: undefined, autoY: undefined, autoOrder: undefined } : {}),
       }
     }) as CanvasElement[]
     history.commit({
       ...scene,
       elements: [...scene.elements.map((element) => ({ ...element, selected: false })), ...copies],
     })
+    return true
   }
 
   const moveSelectedBy = (requestedX: number, requestedY: number) => {
@@ -526,25 +679,52 @@ const App = () => {
 
   const saveProperties = (
     id: string,
-    properties: { text?: string; color: string; fontSize?: number; scale?: number; strokeWidth?: number },
+    properties: {
+      text?: string
+      color?: string
+      fontSize?: number
+      fontFamily?: string
+      scale?: number
+      strokeWidth?: number
+      width?: number
+      height?: number
+      opacity?: number
+    },
   ) => {
     history.commit({
       ...scene,
       elements: scene.elements.map((element) => {
         if (element.id !== id || element.locked || element.kind === 'tile') return element
-        const updated: TextElement | SymbolElement = element.kind === 'text'
-          ? {
+        let updated: TextElement | SymbolElement | DrawingElement | ImageElement
+        if (element.kind === 'text') {
+          updated = {
               ...element,
               text: properties.text ?? element.text,
-              color: properties.color,
+              color: properties.color ?? element.color,
               fontSize: clamp(properties.fontSize ?? element.fontSize, 12, 72),
+              fontFamily: properties.fontFamily ?? element.fontFamily,
             }
-          : {
+        } else if (element.kind === 'symbol') {
+          updated = {
               ...element,
-              color: properties.color,
+              color: properties.color ?? element.color,
               scale: clamp(properties.scale ?? element.scale, 0.5, 3),
               strokeWidth: clamp(properties.strokeWidth ?? element.strokeWidth, 1, 12),
             }
+        } else if (element.kind === 'drawing') {
+          updated = {
+            ...element,
+            color: properties.color ?? element.color,
+            strokeWidth: clamp(properties.strokeWidth ?? element.strokeWidth, 1, 20),
+          }
+        } else {
+          updated = {
+            ...element,
+            width: clamp(properties.width ?? element.width, 32, scene.width),
+            height: clamp(properties.height ?? element.height, 32, scene.height),
+            opacity: clamp(properties.opacity ?? element.opacity, 0.1, 1),
+          }
+        }
         const dimensions = getElementDimensions(updated)
         return {
           ...updated,
@@ -579,8 +759,12 @@ const App = () => {
   }
 
   const saveLocal = () => {
-    localStorage.setItem(MANUAL_SAVE_KEY, JSON.stringify(makeSavedLayout()))
-    notify('配置、表裏、ロック、文字、記号を保存しました')
+    try {
+      localStorage.setItem(MANUAL_SAVE_KEY, JSON.stringify(makeSavedLayout()))
+      notify('牌、文字、線、画像をブラウザへ保存しました')
+    } catch {
+      notify('保存容量が不足しています。画像を小さくしてください')
+    }
   }
 
   const loadLayout = (layout: SavedLayout, message: string) => {
@@ -697,6 +881,26 @@ const App = () => {
     redo: history.redo,
   }
 
+  const imagePasteAction = useRef(addImageFile)
+  imagePasteAction.current = addImageFile
+
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement
+      if (target.matches('input, textarea, select')) return
+      const imageItem = [...event.clipboardData?.items ?? []].find((item) => item.type.startsWith('image/'))
+      const file = imageItem?.getAsFile()
+      if (file) {
+        event.preventDefault()
+        void imagePasteAction.current(file)
+      } else if (keyboardActions.current.pasteClipboard()) {
+        event.preventDefault()
+      }
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement
@@ -714,9 +918,6 @@ const App = () => {
       if (command && key === 'c') {
         event.preventDefault()
         keyboardActions.current.copySelected()
-      } else if (command && key === 'v') {
-        event.preventDefault()
-        keyboardActions.current.pasteClipboard()
       } else if (command && key === 'd') {
         event.preventDefault()
         keyboardActions.current.duplicateSelected()
@@ -750,10 +951,11 @@ const App = () => {
 
   const selected = scene.elements.filter((element) => element.selected)
   const selectedText = selected.length === 1 && selected[0].kind === 'text' && !selected[0].locked ? selected[0] : null
+  const selectedEditable = selected.length === 1 && selected[0].kind !== 'tile' && !selected[0].locked ? selected[0] : null
   const tileCount = scene.elements.filter((element) => element.kind === 'tile').length
   const contextElement = contextMenu ? scene.elements.find((element) => element.id === contextMenu.elementId) ?? null : null
   const propertyElement = propertyElementId
-    ? scene.elements.find((element): element is TextElement | SymbolElement => element.id === propertyElementId && element.kind !== 'tile') ?? null
+    ? scene.elements.find((element): element is TextElement | SymbolElement | DrawingElement | ImageElement => element.id === propertyElementId && element.kind !== 'tile') ?? null
     : null
 
   return (
@@ -777,6 +979,7 @@ const App = () => {
         hasSelection={selected.some((element) => !element.locked)}
         canEditText={Boolean(selectedText)}
         canDuplicate={selected.length > 0}
+        canEditProperties={Boolean(selectedEditable)}
         showGrid={showGrid}
         snapToGrid={snapToGrid}
         screenshotGrid={screenshotGrid}
@@ -789,6 +992,7 @@ const App = () => {
         onDuplicate={duplicateSelected}
         onRotate={rotateSelected}
         onEditSelectedText={() => selectedText && setEditTextRequest({ id: selectedText.id, token: Date.now() })}
+        onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}
         onSetPlacementMode={setPlacementMode}
@@ -799,6 +1003,7 @@ const App = () => {
         onOpenSavedLayouts={() => setSavedLayoutsOpen(true)}
         onExportJson={exportJson}
         onImportJson={() => importInputRef.current?.click()}
+        onAddImage={() => requestImage()}
         onAddText={(text) => commitText(text)}
         onScreenshot={saveScreenshot}
         onToggleScreenshotGrid={() => setScreenshotGrid((value) => !value)}
@@ -819,6 +1024,14 @@ const App = () => {
               <span>{selected.length ? `${selected.length}件を選択中` : placementMode === 'select' ? '空白をドラッグして範囲選択' : '同じツールを連続配置できます（Escで解除）'}</span>
             </div>
             <div className="workspace-meta-actions">
+              <div className="tile-count-ruler" aria-label={`牌の枚数 ${tileCount}枚。13枚基準`}>
+                <div className="tile-count-ruler-heading"><span>牌数メモリ</span><strong>{tileCount}<small>/13枚</small></strong></div>
+                <div className="tile-count-ruler-slots">
+                  {Array.from({ length: 13 }, (_, index) => (
+                    <i key={index} className={index < tileCount ? 'filled' : ''} title={`${index + 1}枚目`} />
+                  ))}
+                </div>
+              </div>
               <WorkspaceSizeControls
                 width={scene.width}
                 height={scene.height}
@@ -843,6 +1056,7 @@ const App = () => {
               onDeleteDragged={deleteElements}
               onTrashHover={setTrashActive}
               onPlaceSymbol={placeSymbol}
+              onCommitDrawing={commitDrawing}
               onCommitText={commitText}
               onFinishTextEditing={() => setEditTextRequest(null)}
               onToggleTileFace={toggleTileFace}
@@ -867,6 +1081,19 @@ const App = () => {
         }}
       />
 
+      <input
+        ref={imageInputRef}
+        className="visually-hidden"
+        type="file"
+        accept="image/*"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) void addImageFile(file, imageAnchorRef.current)
+          imageAnchorRef.current = null
+          event.target.value = ''
+        }}
+      />
+
       {contextMenu && (
         <ContextMenu
           x={contextMenu.clientX}
@@ -886,6 +1113,8 @@ const App = () => {
           onAddTriangle={() => placeSymbol('triangle', contextMenu.canvasX, contextMenu.canvasY)}
           onAddCircle={() => placeSymbol('circle', contextMenu.canvasX, contextMenu.canvasY)}
           onAddCross={() => placeSymbol('cross', contextMenu.canvasX, contextMenu.canvasY)}
+          onDrawMode={() => setPlacementMode('draw')}
+          onAddImage={() => requestImage({ x: contextMenu.canvasX, y: contextMenu.canvasY })}
           onSelectMode={() => setPlacementMode('select')}
           onTextMode={() => setPlacementMode('text')}
           onToggleFace={() => contextElement && toggleTileFace(contextElement.id)}

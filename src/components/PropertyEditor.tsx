@@ -1,36 +1,77 @@
 import { useState, type FormEvent } from 'react'
-import type { SymbolElement, TextElement } from '../types'
+import type { DrawingElement, ImageElement, SymbolElement, TextElement } from '../types'
 
-type EditableElement = TextElement | SymbolElement
+const CUSTOM_COLORS_KEY = 'mahjong-layout-tool:custom-colors-v1'
+
+const readCustomColors = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CUSTOM_COLORS_KEY) ?? '[]') as unknown
+    return Array.isArray(saved)
+      ? saved.filter((value): value is string => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)).slice(0, 24)
+      : []
+  } catch {
+    return []
+  }
+}
+
+type EditableElement = TextElement | SymbolElement | DrawingElement | ImageElement
 
 interface PropertyEditorProps {
   element: EditableElement
   onSave: (properties: {
     text?: string
-    color: string
+    color?: string
     fontSize?: number
+    fontFamily?: string
     scale?: number
     strokeWidth?: number
+    width?: number
+    height?: number
+    opacity?: number
   }) => void
   onClose: () => void
 }
 
 export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps) => {
   const [text, setText] = useState(element.kind === 'text' ? element.text : '')
-  const [color, setColor] = useState(element.color)
+  const [color, setColor] = useState(element.kind === 'image' ? '#244a40' : element.color)
   const [fontSize, setFontSize] = useState(element.kind === 'text' ? element.fontSize : 22)
+  const [fontFamily, setFontFamily] = useState(element.kind === 'text' ? element.fontFamily : 'serif')
   const [scale, setScale] = useState(element.kind === 'symbol' ? element.scale : 1)
-  const [strokeWidth, setStrokeWidth] = useState(element.kind === 'symbol' ? element.strokeWidth : 4)
+  const [strokeWidth, setStrokeWidth] = useState(element.kind === 'symbol' || element.kind === 'drawing' ? element.strokeWidth : 4)
+  const [width, setWidth] = useState(element.kind === 'image' ? element.width : 240)
+  const [height, setHeight] = useState(element.kind === 'image' ? element.height : 180)
+  const [opacity, setOpacity] = useState(element.kind === 'image' ? element.opacity : 1)
+  const [customColors, setCustomColors] = useState(readCustomColors)
+
+  const updateCustomColors = (next: string[]) => {
+    setCustomColors(next)
+    try {
+      localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(next))
+    } catch {
+      // 色パレットは現在の編集操作を妨げないよう、保存失敗時も画面上では利用可能にする。
+    }
+  }
+
+  const addCustomColor = () => {
+    const normalized = color.toLowerCase()
+    if (customColors.includes(normalized)) return
+    updateCustomColors([...customColors, normalized].slice(-24))
+  }
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (element.kind === 'text' && !text.trim()) return
     onSave({
       text: element.kind === 'text' ? text.trim() : undefined,
-      color,
+      color: element.kind === 'image' ? undefined : color,
       fontSize: element.kind === 'text' ? fontSize : undefined,
+      fontFamily: element.kind === 'text' ? fontFamily : undefined,
       scale: element.kind === 'symbol' ? scale : undefined,
-      strokeWidth: element.kind === 'symbol' ? strokeWidth : undefined,
+      strokeWidth: element.kind === 'symbol' || element.kind === 'drawing' ? strokeWidth : undefined,
+      width: element.kind === 'image' ? width : undefined,
+      height: element.kind === 'image' ? height : undefined,
+      opacity: element.kind === 'image' ? opacity : undefined,
     })
   }
 
@@ -58,6 +99,15 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
               文字サイズ
               <input type="number" min="12" max="72" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} />
             </label>
+            <label>
+              フォント
+              <select value={fontFamily} onChange={(event) => setFontFamily(event.target.value)}>
+                <option value="serif">明朝体</option>
+                <option value="sans-serif">ゴシック体</option>
+                <option value="cursive">筆記体・手書き風</option>
+                <option value="monospace">等幅フォント</option>
+              </select>
+            </label>
           </>
         )}
 
@@ -74,13 +124,52 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
           </>
         )}
 
-        <label>
-          色
-          <span className="color-field">
-            <input type="color" value={color} onChange={(event) => setColor(event.target.value)} />
-            <code>{color}</code>
-          </span>
-        </label>
+        {element.kind === 'drawing' && (
+          <label>
+            線の太さ
+            <input type="number" min="1" max="20" value={strokeWidth} onChange={(event) => setStrokeWidth(Number(event.target.value))} />
+          </label>
+        )}
+
+        {element.kind === 'image' && (
+          <>
+            <label>
+              横幅
+              <input type="number" min="32" max="3000" value={width} onChange={(event) => setWidth(Number(event.target.value))} />
+            </label>
+            <label>
+              高さ
+              <input type="number" min="32" max="3000" value={height} onChange={(event) => setHeight(Number(event.target.value))} />
+            </label>
+            <label>
+              透明度（10〜100%）
+              <input type="number" min="10" max="100" value={Math.round(opacity * 100)} onChange={(event) => setOpacity(Number(event.target.value) / 100)} />
+            </label>
+          </>
+        )}
+
+        {element.kind !== 'image' && (
+          <label>
+            {element.kind === 'text' ? '文字色' : '色'}
+            <span className="color-field">
+              <input type="color" value={color} onChange={(event) => setColor(event.target.value)} />
+              <code>{color}</code>
+            </span>
+            <div className="custom-color-palette">
+              <div><strong>自作カラーパレット</strong><button type="button" onClick={addCustomColor}>この色を追加</button></div>
+              {customColors.length ? (
+                <ul>
+                  {customColors.map((customColor) => (
+                    <li key={customColor}>
+                      <button type="button" className="custom-color-swatch" style={{ backgroundColor: customColor }} onClick={() => setColor(customColor)} aria-label={`${customColor}を使う`} title={customColor} />
+                      <button type="button" className="custom-color-remove" onClick={() => updateCustomColors(customColors.filter((value) => value !== customColor))} aria-label={`${customColor}をパレットから削除`}>×</button>
+                    </li>
+                  ))}
+                </ul>
+              ) : <span className="custom-color-empty">よく使う色を追加して再利用できます。</span>}
+            </div>
+          </label>
+        )}
 
         <div className="property-actions">
           <button type="button" onClick={onClose}>キャンセル</button>

@@ -9,6 +9,7 @@ import {
 import { TILE_MAP } from '../data/tiles'
 import type {
   CanvasElement,
+  CanvasPoint,
   ContextMenuState,
   ElementPosition,
   PlacementMode,
@@ -49,6 +50,7 @@ interface WorkspaceProps {
   onDeleteDragged: (ids: string[]) => void
   onTrashHover: (active: boolean) => void
   onPlaceSymbol: (symbolType: SymbolType, x: number, y: number) => void
+  onCommitDrawing: (points: CanvasPoint[]) => void
   onCommitText: (text: string, x: number, y: number, id?: string) => void
   onFinishTextEditing: () => void
   onToggleTileFace: (id: string) => void
@@ -85,6 +87,11 @@ interface TextEditorState {
   value: string
 }
 
+interface DrawingState {
+  pointerId: number
+  points: CanvasPoint[]
+}
+
 const isPalettePoint = (clientX: number, clientY: number) => {
   const palette = document.querySelector<HTMLElement>('.palette-panel')
   if (!palette) return false
@@ -115,8 +122,10 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   const dragRef = useRef<DragState | null>(null)
   const marqueeRef = useRef<MarqueeState | null>(null)
   const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null)
+  const drawingRef = useRef<DrawingState | null>(null)
   const [marquee, setMarquee] = useState<MarqueeState | null>(null)
   const [editor, setEditor] = useState<TextEditorState | null>(null)
+  const [drawing, setDrawing] = useState<DrawingState | null>(null)
 
   useEffect(() => {
     if (!props.editTextRequest) return
@@ -237,7 +246,17 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   }
 
   const beginCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || event.target !== event.currentTarget) return
+    if (event.button !== 0) return
+    if (props.placementMode === 'draw') {
+      const point = canvasPoint(event)
+      const state = { pointerId: event.pointerId, points: [point] }
+      drawingRef.current = state
+      setDrawing(state)
+      props.onClearSelection()
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
+    if (event.target !== event.currentTarget) return
     const point = canvasPoint(event)
     const state: MarqueeState = {
       startX: point.x,
@@ -253,6 +272,17 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   }
 
   const moveCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const activeDrawing = drawingRef.current
+    if (activeDrawing?.pointerId === event.pointerId) {
+      const point = canvasPoint(event)
+      const previous = activeDrawing.points.at(-1)
+      if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 2) {
+        const next = { ...activeDrawing, points: [...activeDrawing.points, point] }
+        drawingRef.current = next
+        setDrawing(next)
+      }
+      return
+    }
     const state = marqueeRef.current
     if (!state) return
     const point = canvasPoint(event)
@@ -267,6 +297,20 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   }
 
   const finishCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const activeDrawing = drawingRef.current
+    if (activeDrawing?.pointerId === event.pointerId) {
+      const point = canvasPoint(event)
+      const points = [...activeDrawing.points, point]
+      drawingRef.current = null
+      setDrawing(null)
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+      if (points.length >= 2 && Math.hypot(points.at(-1)!.x - points[0].x, points.at(-1)!.y - points[0].y) > 3) {
+        props.onCommitDrawing(points)
+      }
+      return
+    }
     const state = marqueeRef.current
     if (!state) return
     marqueeRef.current = null
@@ -286,7 +330,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
 
     if (props.placementMode === 'text') {
       setEditor({ x: state.startX, y: state.startY, value: '' })
-    } else if (props.placementMode !== 'select') {
+    } else if (props.placementMode !== 'select' && props.placementMode !== 'draw') {
       props.onPlaceSymbol(props.placementMode, state.startX, state.startY)
     } else {
       props.onClearSelection()
@@ -368,7 +412,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   return (
     <div
       ref={ref}
-      className={`workspace-canvas${props.showGrid ? ' show-grid' : ''}`}
+      className={`workspace-canvas${props.showGrid ? ' show-grid' : ''}${props.placementMode === 'draw' ? ' drawing-mode' : ''}`}
       style={{ width: props.scene.width, height: props.scene.height }}
       onPointerDown={beginCanvasPointer}
       onPointerMove={moveCanvasPointer}
@@ -388,7 +432,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         props.onDropTile(tileId, event.clientX - bounds.left - TILE_WIDTH / 2, event.clientY - bounds.top - TILE_HEIGHT / 2)
       }}
       onContextMenu={openWorkspaceContextMenu}
-      aria-label="麻雀牌・文字・記号の作業エリア"
+      aria-label="麻雀牌・文字・記号・画像・線の作業エリア"
     >
       {props.scene.elements.length === 0 && !editor && (
         <div className="empty-canvas" aria-hidden="true">
@@ -410,7 +454,9 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
             width: dimensions.width,
             height: dimensions.height,
           },
-          onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => beginElementDrag(event, element),
+          onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
+            if (props.placementMode !== 'draw') beginElementDrag(event, element)
+          },
           onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => openContextMenu(event, element),
         }
 
@@ -459,11 +505,55 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
                 style={{
                   color: element.color,
                   fontSize: element.fontSize,
+                  fontFamily: element.fontFamily,
                   width: baseWidth,
                   height: baseHeight,
                   transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
                 }}
               >{element.text}</span>
+              {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
+            </button>
+          )
+        }
+
+        if (element.kind === 'image') {
+          return (
+            <button key={element.id} {...commonProps} aria-label={`画像「${element.name}」${element.selected ? '、選択中' : ''}${lockedLabel}`}>
+              <img
+                className="image-visual"
+                src={element.src}
+                alt=""
+                draggable={false}
+                style={{
+                  width: element.width,
+                  height: element.height,
+                  opacity: element.opacity,
+                  transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
+                }}
+              />
+              {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
+            </button>
+          )
+        }
+
+        if (element.kind === 'drawing') {
+          return (
+            <button key={element.id} {...commonProps} aria-label={`手描き線${element.selected ? '、選択中' : ''}${lockedLabel}`}>
+              <svg
+                className="drawing-visual"
+                viewBox={`0 0 ${element.width} ${element.height}`}
+                style={{ width: element.width, height: element.height, transform: `translate(-50%, -50%) rotate(${element.rotation}deg)` }}
+                aria-hidden="true"
+              >
+                <polyline
+                  points={element.points.map((point) => `${point.x},${point.y}`).join(' ')}
+                  fill="none"
+                  stroke={element.color}
+                  strokeWidth={element.strokeWidth}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
               {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
             </button>
           )
@@ -520,6 +610,12 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       )}
 
       {marquee?.visible && <div className="selection-marquee export-hidden" style={marqueeStyle} />}
+
+      {drawing && (
+        <svg className="drawing-preview export-hidden" viewBox={`0 0 ${props.scene.width} ${props.scene.height}`} aria-hidden="true">
+          <polyline points={drawing.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
 
       <button
         type="button"

@@ -127,6 +127,7 @@
 .tile-group + .tile-group { margin-top: 12px; }
 .tile-group h3 { margin: 0 0 6px; color: #687e77; font-size: 10px; letter-spacing: .12em; }
 .tile-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.honor-grid .palette-tile:nth-child(5) { grid-column: 1; }
 .red-grid { grid-template-columns: repeat(3, 1fr); }
 .red-group { border-top: 1px dashed #d6c39e; padding-top: 11px; }
 
@@ -156,6 +157,13 @@
 .workspace-meta { min-height: 50px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 14px; border-bottom: 1px solid var(--line); color: #758780; font-size: 10px; }
 .workspace-meta > div { display: flex; align-items: center; gap: 10px; }
 .workspace-meta-actions { margin-left: auto; }
+.tile-count-ruler { width: 168px; padding: 4px 7px 5px; border: 1px solid #cdd9d2; border-radius: 7px; background: #fff; }
+.tile-count-ruler-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 3px; color: #687e77; font-size: 9px; font-weight: 800; }
+.tile-count-ruler-heading strong { color: #1b5a49; font: 800 14px ui-monospace, monospace; }
+.tile-count-ruler-heading small { margin-left: 1px; color: #758780; font: 700 9px Inter, sans-serif; }
+.tile-count-ruler-slots { display: grid; grid-template-columns: repeat(13, 1fr); gap: 2px; }
+.tile-count-ruler-slots i { height: 8px; border: 1px solid #b8c9c1; border-radius: 2px; background: #f5f7f4; }
+.tile-count-ruler-slots i.filled { border-color: #c99639; background: linear-gradient(135deg, #e9c871, #bd8d32); }
 .workspace-size-controls { display: flex; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid #cdd9d2; border-radius: 7px; background: #fff; }
 .workspace-size-controls label { display: flex; align-items: center; gap: 4px; color: #536b64; font-size: 10px; }
 .workspace-size-controls input { width: 64px; height: 25px; padding: 0 4px; border: 1px solid #d6dfda; border-radius: 4px; color: #244a40; background: #fbfcfa; font: 600 10px ui-monospace, monospace; }
@@ -205,6 +213,12 @@
 .placed-item.locked::before { content: ""; position: absolute; inset: -3px; border: 1px dashed rgba(55, 80, 73, .55); border-radius: 6px; pointer-events: none; }
 .lock-badge { position: absolute; right: -8px; top: -10px; z-index: 4; width: 19px; height: 19px; display: grid; place-items: center; border: 1px solid #cad5cf; border-radius: 50%; background: #fff; font-size: 10px; box-shadow: 0 2px 5px rgba(20, 55, 46, .2); pointer-events: none; }
 .placed-text { border-radius: 4px; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; white-space: nowrap; }
+.placed-image { border-radius: 5px; }
+.image-visual, .drawing-visual { position: absolute; left: 50%; top: 50%; display: block; transform-origin: center; pointer-events: none; }
+.image-visual { object-fit: contain; border-radius: 4px; }
+.drawing-visual { overflow: visible; }
+.workspace-canvas.drawing-mode, .workspace-canvas.drawing-mode .placed-item { cursor: crosshair; }
+.drawing-preview { position: absolute; inset: 0; z-index: 9997; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .placed-text.editing { opacity: .28; }
 .text-visual, .symbol-visual { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; transform-origin: center; pointer-events: none; }
 .text-visual { padding: 4px 8px; line-height: 1.35; letter-spacing: .03em; text-align: left; white-space: nowrap; }
@@ -232,12 +246,22 @@
 .property-editor { width: min(430px, 100%); position: relative; display: grid; gap: 14px; padding: 32px 34px 28px; border-radius: 15px; background: #fbfaf4; box-shadow: 0 25px 80px rgba(0, 0, 0, .38); }
 .property-editor h2 { margin: 0 0 5px; color: #143c32; font: 700 23px "Yu Mincho", serif; }
 .property-editor > label { display: grid; gap: 6px; color: #4b665e; font-size: 11px; font-weight: 700; }
-.property-editor input[type="number"], .property-editor textarea { width: 100%; box-sizing: border-box; border: 1px solid #c8d5ce; border-radius: 7px; background: #fff; color: #173c32; font: 500 13px Inter, sans-serif; }
+.property-editor input[type="number"], .property-editor textarea, .property-editor select { width: 100%; box-sizing: border-box; border: 1px solid #c8d5ce; border-radius: 7px; background: #fff; color: #173c32; font: 500 13px Inter, sans-serif; }
 .property-editor input[type="number"] { height: 36px; padding: 0 10px; }
+.property-editor select { height: 38px; padding: 0 10px; }
 .property-editor textarea { min-height: 80px; padding: 9px 10px; resize: vertical; }
 .color-field { display: flex; align-items: center; gap: 10px; }
 .color-field input { width: 48px; height: 34px; padding: 2px; border: 1px solid #c8d5ce; border-radius: 6px; background: #fff; }
 .color-field code { color: #60756e; }
+.custom-color-palette { display: grid; gap: 6px; padding: 8px; border: 1px solid #d7e1dc; border-radius: 7px; background: #f4f7f3; }
+.custom-color-palette > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.custom-color-palette strong { color: #547168; font-size: 10px; }
+.custom-color-palette > div button { padding: 3px 6px; border: 1px solid #b9ccc3; border-radius: 4px; background: #fff; color: #315f52; font-size: 10px; cursor: pointer; }
+.custom-color-palette ul { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.custom-color-palette li { position: relative; width: 27px; height: 27px; }
+.custom-color-swatch { width: 27px; height: 27px; border: 2px solid #fff; border-radius: 6px; box-shadow: 0 0 0 1px #aebfb7; cursor: pointer; }
+.custom-color-remove { position: absolute; right: -5px; top: -6px; width: 14px; height: 14px; padding: 0; border: 1px solid #c6d1cb; border-radius: 50%; background: #fff; color: #8a4c44; font-size: 11px; line-height: 11px; cursor: pointer; }
+.custom-color-empty { color: #81918b; font-size: 10px; font-weight: 500; }
 .property-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; }
 .property-actions > button { min-width: 105px; height: 39px; border: 1px solid #c8d5ce; border-radius: 7px; background: #fff; color: #49655d; cursor: pointer; }
 .property-actions .primary-button { width: auto; border: 0; color: #fff; }
@@ -325,6 +349,8 @@ kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; bor
   .workspace-meta > div:first-child { display: none; }
   .legend { display: none !important; }
   .workspace-size-controls input { width: 56px; }
+  .tile-count-ruler { width: 118px; }
+  .tile-count-ruler-heading > span { display: none; }
   .workspace-scroll { padding: 8px; }
   .palette-panel { border-radius: 10px; max-height: none; }
   .palette-scroll { display: block; overflow: visible; }

@@ -4,7 +4,12 @@ export type Rotation = 0 | 90 | 180 | 270
 
 export type SymbolType = 'rectangle' | 'cross' | 'circle' | 'triangle'
 
-export type PlacementMode = 'select' | 'text' | SymbolType
+export type PlacementMode = 'select' | 'text' | 'draw' | SymbolType
+
+export interface CanvasPoint {
+  x: number
+  y: number
+}
 
 export interface TileDefinition {
   id: string
@@ -32,6 +37,9 @@ export interface TileElement extends CanvasElementBase {
   kind: 'tile'
   tileId: string
   faceDown: boolean
+  autoX?: number
+  autoY?: number
+  autoOrder?: number
 }
 
 export interface TextElement extends CanvasElementBase {
@@ -39,6 +47,7 @@ export interface TextElement extends CanvasElementBase {
   text: string
   color: string
   fontSize: number
+  fontFamily: string
 }
 
 export interface SymbolElement extends CanvasElementBase {
@@ -49,7 +58,25 @@ export interface SymbolElement extends CanvasElementBase {
   scale: number
 }
 
-export type CanvasElement = TileElement | TextElement | SymbolElement
+export interface DrawingElement extends CanvasElementBase {
+  kind: 'drawing'
+  points: CanvasPoint[]
+  width: number
+  height: number
+  color: string
+  strokeWidth: number
+}
+
+export interface ImageElement extends CanvasElementBase {
+  kind: 'image'
+  src: string
+  name: string
+  width: number
+  height: number
+  opacity: number
+}
+
+export type CanvasElement = TileElement | TextElement | SymbolElement | DrawingElement | ImageElement
 
 export interface Scene {
   elements: CanvasElement[]

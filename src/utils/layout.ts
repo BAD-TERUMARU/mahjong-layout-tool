@@ -1,6 +1,9 @@
 import { TILE_DEFINITIONS, TILE_MAP } from '../data/tiles'
 import type {
   CanvasElement,
+  CanvasPoint,
+  DrawingElement,
+  ImageElement,
   Rotation,
   Scene,
   SymbolElement,
@@ -12,7 +15,7 @@ import type {
 export const GRID_SIZE = 16
 export const TILE_WIDTH = 48
 export const TILE_HEIGHT = 66
-export const TILE_GAP = 3
+export const TILE_GAP = 2
 export const DEFAULT_WORKSPACE_WIDTH = 900
 export const DEFAULT_WORKSPACE_HEIGHT = 560
 export const MIN_WORKSPACE_WIDTH = 520
@@ -49,6 +52,9 @@ export const getSymbolBaseDimensions = (symbolType: SymbolType) => {
 
 export const getElementDimensions = (element: CanvasElement) => {
   if (element.kind === 'tile') return rotateDimensions(TILE_WIDTH, TILE_HEIGHT, element.rotation)
+  if (element.kind === 'image' || element.kind === 'drawing') {
+    return rotateDimensions(element.width, element.height, element.rotation)
+  }
   if (element.kind === 'symbol') {
     const dimensions = getSymbolBaseDimensions(element.symbolType)
     return rotateDimensions(dimensions.width * element.scale, dimensions.height * element.scale, element.rotation)
@@ -95,6 +101,9 @@ export const makeTile = (tileId: string, x: number, y: number, zIndex: number): 
   kind: 'tile',
   tileId,
   faceDown: false,
+  autoX: Math.round(x),
+  autoY: Math.round(y),
+  autoOrder: zIndex,
 })
 
 export const makeText = (text: string, x: number, y: number, zIndex: number): TextElement => ({
@@ -103,6 +112,42 @@ export const makeText = (text: string, x: number, y: number, zIndex: number): Te
   text,
   color: '#172c27',
   fontSize: 22,
+  fontFamily: 'serif',
+})
+
+export const makeDrawing = (
+  points: CanvasPoint[],
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  zIndex: number,
+): DrawingElement => ({
+  ...makeBase('drawing', x, y, zIndex),
+  kind: 'drawing',
+  points,
+  width,
+  height,
+  color: '#244a40',
+  strokeWidth: 4,
+})
+
+export const makeImage = (
+  src: string,
+  name: string,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  zIndex: number,
+): ImageElement => ({
+  ...makeBase('image', x, y, zIndex),
+  kind: 'image',
+  src,
+  name,
+  width,
+  height,
+  opacity: 1,
 })
 
 export const makeSymbol = (symbolType: SymbolType, x: number, y: number, zIndex: number): SymbolElement => ({

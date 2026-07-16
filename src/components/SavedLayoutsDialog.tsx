@@ -31,7 +31,17 @@ const LayoutPreview = ({ saved }: { saved: NamedSavedLayout }) => {
             : tile && <img key={element.id} className="saved-preview-item" src={tile.asset} alt="" style={style} />
         }
         if (element.kind === 'text') {
-          return <span key={element.id} className="saved-preview-item saved-preview-text" style={{ ...style, color: element.color }}>{element.text}</span>
+          return <span key={element.id} className="saved-preview-item saved-preview-text" style={{ ...style, color: element.color, fontFamily: element.fontFamily }}>{element.text}</span>
+        }
+        if (element.kind === 'image') {
+          return <img key={element.id} className="saved-preview-item" src={element.src} alt="" style={{ ...style, opacity: element.opacity }} />
+        }
+        if (element.kind === 'drawing') {
+          return (
+            <svg key={element.id} className="saved-preview-item" viewBox={`0 0 ${element.width} ${element.height}`} style={style}>
+              <polyline points={element.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )
         }
         return (
           <span key={element.id} className={`saved-preview-item saved-preview-symbol preview-${element.symbolType}`} style={{ ...style, color: element.color }}>
