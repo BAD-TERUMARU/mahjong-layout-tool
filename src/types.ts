@@ -56,6 +56,8 @@ export interface SymbolElement extends CanvasElementBase {
   color: string
   strokeWidth: number
   scale: number
+  scaleX?: number
+  scaleY?: number
 }
 
 export interface DrawingElement extends CanvasElementBase {

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { toPng } from 'html-to-image'
 import './App.css'
 import { ContextMenu } from './components/ContextMenu'
 import { HelpModal } from './components/HelpModal'
@@ -8,7 +7,6 @@ import { SavedLayoutsDialog } from './components/SavedLayoutsDialog'
 import { TilePalette } from './components/TilePalette'
 import { Toolbar } from './components/Toolbar'
 import { Workspace } from './components/Workspace'
-import { WorkspaceSizeControls } from './components/WorkspaceSizeControls'
 import { TILE_MAP } from './data/tiles'
 import { useSceneHistory } from './hooks/useSceneHistory'
 import type {
@@ -53,7 +51,6 @@ import {
 } from './utils/layout'
 
 const AUTO_SAVE_KEY = 'mahjong-layout-tool:auto-v1'
-const MANUAL_SAVE_KEY = 'mahjong-layout-tool:manual-v1'
 const SAVED_LAYOUTS_KEY = 'mahjong-layout-tool:saved-pages-v1'
 const HELP_KEY = 'mahjong-layout-tool:help-seen'
 const EMPTY_SCENE: Scene = {
@@ -117,6 +114,8 @@ const parseElement = (value: unknown): CanvasElement | null => {
       color: typeof item.color === 'string' ? item.color : item.symbolType === 'cross' ? '#b13f34' : '#244a40',
       strokeWidth: typeof item.strokeWidth === 'number' ? clamp(item.strokeWidth, 1, 12) : 4,
       scale: typeof item.scale === 'number' ? clamp(item.scale, 0.5, 3) : 1,
+      scaleX: typeof item.scaleX === 'number' ? clamp(item.scaleX, 0.25, 12) : undefined,
+      scaleY: typeof item.scaleY === 'number' ? clamp(item.scaleY, 0.25, 12) : undefined,
     }
   }
   if (item.kind === 'drawing' && Array.isArray(item.points)) {
@@ -239,15 +238,6 @@ const readSharedLayout = (): SavedLayout | null => {
   }
 }
 
-const downloadBlob = (blob: Blob, filename: string) => {
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
-}
-
 const loadImageFile = (file: File) => new Promise<{ src: string; width: number; height: number }>((resolve, reject) => {
   if (!file.type.startsWith('image/')) {
     reject(new Error('not-image'))
@@ -287,7 +277,6 @@ const App = () => {
   const [showGrid, setShowGrid] = useState(initialLayout?.settings.showGrid ?? true)
   const [snapToGrid, setSnapToGrid] = useState(initialLayout?.settings.snapToGrid ?? false)
   const [defaultTextStyle, setDefaultTextStyle] = useState({ fontFamily: 'serif', fontSize: 22, color: '#172c27' })
-  const [screenshotGrid, setScreenshotGrid] = useState(true)
   const [placementMode, setPlacementMode] = useState<PlacementMode>('select')
   const [editTextRequest, setEditTextRequest] = useState<{ id: string; token: number } | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -299,7 +288,6 @@ const App = () => {
   const [helpOpen, setHelpOpen] = useState(() => localStorage.getItem(HELP_KEY) !== '1')
   const [toast, setToast] = useState('')
   const workspaceRef = useRef<HTMLDivElement>(null)
-  const importInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const imageAnchorRef = useRef<{ x: number; y: number } | null>(null)
   const autoSaveWarningShownRef = useRef(false)
@@ -564,7 +552,8 @@ const App = () => {
     const width = Math.max(16, Math.min(scene.width - x, Math.ceil(maxX - x + padding)))
     const height = Math.max(16, Math.min(scene.height - y, Math.ceil(maxY - y + padding)))
     const relative = points.map((point) => ({ x: point.x - x, y: point.y - y }))
-    history.commit({ ...scene, elements: [...scene.elements, makeDrawing(relative, x, y, width, height, nextZIndex())] })
+    const item = makeDrawing(relative, x, y, width, height, nextZIndex())
+    history.commit({ ...scene, elements: [...scene.elements, { ...item, color: defaultTextStyle.color }] })
   }
 
   const addImageFile = async (file: File, anchor?: { x: number; y: number } | null) => {
@@ -704,10 +693,7 @@ const App = () => {
       color?: string
       fontSize?: number
       fontFamily?: string
-      scale?: number
       strokeWidth?: number
-      width?: number
-      height?: number
       opacity?: number
     },
   ) => {
@@ -728,7 +714,6 @@ const App = () => {
           updated = {
               ...element,
               color: properties.color ?? element.color,
-              scale: clamp(properties.scale ?? element.scale, 0.5, 3),
               strokeWidth: clamp(properties.strokeWidth ?? element.strokeWidth, 1, 12),
             }
         } else if (element.kind === 'drawing') {
@@ -740,8 +725,6 @@ const App = () => {
         } else {
           updated = {
             ...element,
-            width: clamp(properties.width ?? element.width, 32, scene.width),
-            height: clamp(properties.height ?? element.height, 32, scene.height),
             opacity: clamp(properties.opacity ?? element.opacity, 0.1, 1),
           }
         }
@@ -769,12 +752,20 @@ const App = () => {
     })
   }
 
-  const resizeSymbol = (id: string, scale: number) => {
+  const resizeElement = (id: string, width: number, height: number) => {
     history.updateLive({
       ...scene,
-      elements: scene.elements.map((element) => element.id === id && element.kind === 'symbol' && !element.locked
-        ? { ...element, scale: clamp(scale, 0.5, 3) }
-        : element),
+      elements: scene.elements.map((element) => {
+        if (element.id !== id || element.locked) return element
+        if (element.kind === 'symbol') {
+          const base = getElementDimensions({ ...element, scale: 1, scaleX: 1, scaleY: 1 })
+          return { ...element, scaleX: clamp(width / base.width, 0.25, 12), scaleY: clamp(height / base.height, 0.25, 12) }
+        }
+        if (element.kind === 'image' || element.kind === 'drawing') {
+          return { ...element, width: clamp(width, 24, scene.width), height: clamp(height, 24, scene.height) }
+        }
+        return element
+      }),
     })
   }
 
@@ -800,15 +791,6 @@ const App = () => {
     else history.commit(nextScene)
   }
 
-  const saveLocal = () => {
-    try {
-      localStorage.setItem(MANUAL_SAVE_KEY, JSON.stringify(makeSavedLayout()))
-      notify('牌、文字、線、画像をブラウザへ保存しました')
-    } catch {
-      notify('保存容量が不足しています。画像を小さくしてください')
-    }
-  }
-
   const loadLayout = (layout: SavedLayout, message: string) => {
     history.load(layout.scene)
     setRulerCount(layout.scene.elements.filter((element) => element.kind === 'tile').length)
@@ -817,15 +799,6 @@ const App = () => {
     setPlacementMode('select')
     setContextMenu(null)
     notify(message)
-  }
-
-  const loadLocal = () => {
-    const layout = parseSavedLayout(localStorage.getItem(MANUAL_SAVE_KEY))
-    if (!layout) {
-      notify('ブラウザ保存データがありません')
-      return
-    }
-    loadLayout(layout, '保存した配置を復元しました')
   }
 
   const saveNamedLayout = (name: string) => {
@@ -895,42 +868,9 @@ const App = () => {
   }
 
   const saveQuickLayout = () => {
-    saveLocal()
     const name = `保存 ${new Date().toLocaleString('ja-JP')}`
     saveNamedLayout(name)
     setSavedLayoutsOpen(true)
-  }
-
-  const exportJson = () => {
-    downloadBlob(new Blob([JSON.stringify(makeSavedLayout(), null, 2)], { type: 'application/json' }), 'mahjong-layout.json')
-    notify('JSONを書き出しました')
-  }
-
-  const importJson = async (file: File) => {
-    const layout = parseSavedLayout(await file.text())
-    if (!layout) {
-      notify('読み込めないJSON形式です')
-      return
-    }
-    loadLayout(layout, 'JSONから配置を読み込みました')
-  }
-
-  const saveScreenshot = async () => {
-    const canvas = workspaceRef.current
-    if (!canvas) return
-    try {
-      canvas.classList.add('is-capturing')
-      if (!screenshotGrid) canvas.classList.add('capture-hide-grid')
-      await new Promise(requestAnimationFrame)
-      const dataUrl = await toPng(canvas, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' })
-      const response = await fetch(dataUrl)
-      downloadBlob(await response.blob(), `mahjong-layout-${new Date().toISOString().slice(0, 10)}.png`)
-      notify('作業エリアをPNGで保存しました')
-    } catch {
-      notify('PNGの保存に失敗しました')
-    } finally {
-      canvas.classList.remove('is-capturing', 'capture-hide-grid')
-    }
   }
 
   const keyboardActions = useRef({
@@ -958,6 +898,8 @@ const App = () => {
 
   const imagePasteAction = useRef(addImageFile)
   imagePasteAction.current = addImageFile
+  const textPasteAction = useRef(commitText)
+  textPasteAction.current = commitText
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
@@ -970,6 +912,12 @@ const App = () => {
         void imagePasteAction.current(file)
       } else if (keyboardActions.current.pasteClipboard()) {
         event.preventDefault()
+      } else {
+        const text = event.clipboardData?.getData('text/plain').trim()
+        if (text) {
+          event.preventDefault()
+          textPasteAction.current(text)
+        }
       }
     }
     window.addEventListener('paste', handlePaste)
@@ -1026,7 +974,7 @@ const App = () => {
 
   const selected = scene.elements.filter((element) => element.selected)
   const selectedText = selected.length === 1 && selected[0].kind === 'text' && !selected[0].locked ? selected[0] : null
-  const selectedSymbol = selected.length === 1 && selected[0].kind === 'symbol' && !selected[0].locked ? selected[0] : null
+  const selectedColoredElement = selected.length === 1 && (selected[0].kind === 'symbol' || selected[0].kind === 'drawing') && !selected[0].locked ? selected[0] : null
   const selectedEditable = selected.length === 1 && selected[0].kind !== 'tile' && !selected[0].locked ? selected[0] : null
   const tileCount = scene.elements.filter((element) => element.kind === 'tile').length
   const contextElement = contextMenu ? scene.elements.find((element) => element.id === contextMenu.elementId) ?? null : null
@@ -1056,12 +1004,11 @@ const App = () => {
         canEditText={Boolean(selectedText)}
         textStyle={selectedText ? { fontFamily: selectedText.fontFamily, fontSize: selectedText.fontSize, color: selectedText.color } : defaultTextStyle}
         isEditingSelectedText={Boolean(selectedText)}
-        selectedShapeColor={selectedSymbol?.color ?? null}
+        selectedShapeColor={selectedColoredElement?.color ?? null}
         canDuplicate={selected.length > 0}
         canEditProperties={Boolean(selectedEditable)}
         showGrid={showGrid}
         snapToGrid={snapToGrid}
-        screenshotGrid={screenshotGrid}
         placementMode={placementMode}
         onClear={() => {
           history.commit({ ...EMPTY_SCENE, width: scene.width, height: scene.height })
@@ -1089,7 +1036,7 @@ const App = () => {
             color: style.color ?? current.color,
           }))
         }}
-        onUpdateSelectedShapeColor={(color) => selectedSymbol && updateElementColor(selectedSymbol.id, color)}
+        onUpdateSelectedShapeColor={(color) => selectedColoredElement && updateElementColor(selectedColoredElement.id, color)}
         onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}
@@ -1097,14 +1044,9 @@ const App = () => {
         onToggleGrid={() => setShowGrid((value) => !value)}
         onToggleSnap={() => setSnapToGrid((value) => !value)}
         onSaveLocal={saveQuickLayout}
-        onLoadLocal={loadLocal}
         onOpenSavedLayouts={() => setSavedLayoutsOpen(true)}
-        onExportJson={exportJson}
-        onImportJson={() => importInputRef.current?.click()}
         onAddImage={() => requestImage()}
         onAddText={(text) => commitText(text)}
-        onScreenshot={saveScreenshot}
-        onToggleScreenshotGrid={() => setScreenshotGrid((value) => !value)}
         onHelp={() => setHelpOpen(true)}
       />
 
@@ -1122,11 +1064,6 @@ const App = () => {
               <span>{selected.length ? `${selected.length}件を選択中` : placementMode === 'select' ? '空白をドラッグして範囲選択' : '同じツールを連続配置できます（Escで解除）'}</span>
             </div>
             <div className="workspace-meta-actions">
-              <WorkspaceSizeControls
-                width={scene.width}
-                height={scene.height}
-                onChange={(width, height) => resizeWorkspace(width, height)}
-              />
               <div className="legend"><span><i className="legend-grid" />{GRID_SIZE}pxグリッド</span><span><i className="legend-select" />選択中</span></div>
             </div>
           </div>
@@ -1147,6 +1084,8 @@ const App = () => {
               placementMode={placementMode}
               editTextRequest={editTextRequest}
               onDropTile={addTile}
+              onDropFiles={(files, x, y) => files.forEach((file, index) => void addImageFile(file, { x: x + index * 20, y: y + index * 20 }))}
+              onDropText={(text, x, y) => commitText(text, x, y)}
               onSelectElement={selectElement}
               onSelectRange={selectRange}
               onClearSelection={clearSelection}
@@ -1160,25 +1099,13 @@ const App = () => {
               onToggleTileFace={toggleTileFace}
               onOpenContextMenu={openContextMenu}
               onResize={(width, height) => resizeWorkspace(width, height, true)}
-              onResizeSymbol={resizeSymbol}
+              onResizeElement={resizeElement}
               onBeginDrag={history.beginTransaction}
               onEndDrag={history.endTransaction}
             />
           </div>
         </section>
       </main>
-
-      <input
-        ref={importInputRef}
-        className="visually-hidden"
-        type="file"
-        accept="application/json,.json"
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) void importJson(file)
-          event.target.value = ''
-        }}
-      />
 
       <input
         ref={imageInputRef}

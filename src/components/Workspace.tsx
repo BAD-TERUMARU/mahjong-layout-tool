@@ -43,6 +43,8 @@ interface WorkspaceProps {
   placementMode: PlacementMode
   editTextRequest: EditTextRequest | null
   onDropTile: (tileId: string, x: number, y: number) => void
+  onDropFiles: (files: File[], x: number, y: number) => void
+  onDropText: (text: string, x: number, y: number) => void
   onSelectElement: (id: string, additive: boolean) => void
   onSelectRange: (ids: string[], additive: boolean) => void
   onClearSelection: () => void
@@ -56,7 +58,7 @@ interface WorkspaceProps {
   onToggleTileFace: (id: string) => void
   onOpenContextMenu: (state: ContextMenuState) => void
   onResize: (width: number, height: number) => void
-  onResizeSymbol: (id: string, scale: number) => void
+  onResizeElement: (id: string, width: number, height: number) => void
   onBeginDrag: () => void
   onEndDrag: () => void
 }
@@ -93,14 +95,13 @@ interface DrawingState {
   points: CanvasPoint[]
 }
 
-interface SymbolResizeState {
+interface ElementResizeState {
   pointerId: number
   id: string
   startClientX: number
   startClientY: number
-  startScale: number
-  baseWidth: number
-  baseHeight: number
+  startWidth: number
+  startHeight: number
 }
 
 const isPalettePoint = (clientX: number, clientY: number) => {
@@ -134,7 +135,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   const marqueeRef = useRef<MarqueeState | null>(null)
   const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null)
   const drawingRef = useRef<DrawingState | null>(null)
-  const symbolResizeRef = useRef<SymbolResizeState | null>(null)
+  const elementResizeRef = useRef<ElementResizeState | null>(null)
   const [marquee, setMarquee] = useState<MarqueeState | null>(null)
   const [editor, setEditor] = useState<TextEditorState | null>(null)
   const [drawing, setDrawing] = useState<DrawingState | null>(null)
@@ -249,45 +250,51 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     }
   }, [moveElementDrag, endElementDrag])
 
-  const beginSymbolResize = (event: ReactPointerEvent<HTMLButtonElement>, element: CanvasElement) => {
-    if (event.button !== 0 || element.kind !== 'symbol' || element.locked) return
+  const beginElementResize = (event: ReactPointerEvent<HTMLButtonElement>, element: CanvasElement) => {
+    if (event.button !== 0 || (element.kind !== 'symbol' && element.kind !== 'image' && element.kind !== 'drawing') || element.locked) return
     event.preventDefault()
     event.stopPropagation()
-    const base = getSymbolBaseDimensions(element.symbolType)
+    const dimensions = getElementDimensions(element)
     event.currentTarget.setPointerCapture(event.pointerId)
-    symbolResizeRef.current = {
+    elementResizeRef.current = {
       pointerId: event.pointerId,
       id: element.id,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      startScale: element.scale,
-      baseWidth: base.width,
-      baseHeight: base.height,
+      startWidth: dimensions.width,
+      startHeight: dimensions.height,
     }
     props.onBeginDrag()
   }
 
   useEffect(() => {
-    const moveSymbolResize = (event: PointerEvent) => {
-      const resize = symbolResizeRef.current
+    const moveElementResize = (event: PointerEvent) => {
+      const resize = elementResizeRef.current
       if (!resize || resize.pointerId !== event.pointerId) return
-      const delta = Math.max(event.clientX - resize.startClientX, event.clientY - resize.startClientY)
-      const baseSize = Math.max(resize.baseWidth, resize.baseHeight)
-      propsRef.current.onResizeSymbol(resize.id, clamp(resize.startScale + delta / baseSize, 0.5, 3))
+      const deltaX = event.clientX - resize.startClientX
+      const deltaY = event.clientY - resize.startClientY
+      let width = clamp(resize.startWidth + deltaX, 24, propsRef.current.scene.width)
+      let height = clamp(resize.startHeight + deltaY, 24, propsRef.current.scene.height)
+      if (event.shiftKey) {
+        const factor = Math.max(width / resize.startWidth, height / resize.startHeight)
+        width = clamp(resize.startWidth * factor, 24, propsRef.current.scene.width)
+        height = clamp(resize.startHeight * factor, 24, propsRef.current.scene.height)
+      }
+      propsRef.current.onResizeElement(resize.id, width, height)
     }
-    const endSymbolResize = (event: PointerEvent) => {
-      const resize = symbolResizeRef.current
+    const endElementResize = (event: PointerEvent) => {
+      const resize = elementResizeRef.current
       if (!resize || resize.pointerId !== event.pointerId) return
-      symbolResizeRef.current = null
+      elementResizeRef.current = null
       propsRef.current.onEndDrag()
     }
-    window.addEventListener('pointermove', moveSymbolResize)
-    window.addEventListener('pointerup', endSymbolResize)
-    window.addEventListener('pointercancel', endSymbolResize)
+    window.addEventListener('pointermove', moveElementResize)
+    window.addEventListener('pointerup', endElementResize)
+    window.addEventListener('pointercancel', endElementResize)
     return () => {
-      window.removeEventListener('pointermove', moveSymbolResize)
-      window.removeEventListener('pointerup', endSymbolResize)
-      window.removeEventListener('pointercancel', endSymbolResize)
+      window.removeEventListener('pointermove', moveElementResize)
+      window.removeEventListener('pointerup', endElementResize)
+      window.removeEventListener('pointercancel', endElementResize)
     }
   }, [])
 
@@ -462,7 +469,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     width: Math.abs(marquee.currentX - marquee.startX),
     height: Math.abs(marquee.currentY - marquee.startY),
   } : undefined
-  const selectedSymbol = props.scene.elements.find((element): element is CanvasElement & { kind: 'symbol' } => element.kind === 'symbol' && element.selected && !element.locked) ?? null
+  const selectedResizable = props.scene.elements.find((element) => (element.kind === 'symbol' || element.kind === 'image' || element.kind === 'drawing') && element.selected && !element.locked) ?? null
 
   return (
     <div
@@ -474,7 +481,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       onPointerUp={finishCanvasPointer}
       onPointerCancel={finishCanvasPointer}
       onDragOver={(event) => {
-        if (event.dataTransfer.types.includes('application/x-mahjong-tile')) {
+        if (event.dataTransfer.types.includes('application/x-mahjong-tile') || event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('text/plain')) {
           event.preventDefault()
           event.dataTransfer.dropEffect = 'copy'
         }
@@ -482,9 +489,20 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       onDrop={(event) => {
         event.preventDefault()
         const tileId = event.dataTransfer.getData('application/x-mahjong-tile')
-        if (!TILE_MAP.has(tileId)) return
         const bounds = event.currentTarget.getBoundingClientRect()
-        props.onDropTile(tileId, event.clientX - bounds.left - TILE_WIDTH / 2, event.clientY - bounds.top - TILE_HEIGHT / 2)
+        const x = event.clientX - bounds.left
+        const y = event.clientY - bounds.top
+        if (TILE_MAP.has(tileId)) {
+          props.onDropTile(tileId, x - TILE_WIDTH / 2, y - TILE_HEIGHT / 2)
+          return
+        }
+        const files = [...event.dataTransfer.files].filter((file) => file.type.startsWith('image/'))
+        if (files.length) {
+          props.onDropFiles(files, x, y)
+          return
+        }
+        const text = event.dataTransfer.getData('text/plain').trim()
+        if (text) props.onDropText(text, x, y)
       }}
       onContextMenu={openWorkspaceContextMenu}
       aria-label="麻雀牌・文字・記号・画像・線の作業エリア"
@@ -615,8 +633,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         }
 
         const base = getSymbolBaseDimensions(element.symbolType)
-        const visualWidth = base.width * element.scale
-        const visualHeight = base.height * element.scale
+        const visualWidth = base.width * (element.scaleX ?? element.scale)
+        const visualHeight = base.height * (element.scaleY ?? element.scale)
         const visualTransform = `translate(-50%, -50%) rotate(${element.rotation}deg)`
         return (
           <button key={element.id} {...commonProps} aria-label={`${SYMBOL_LABELS[element.symbolType]}${element.selected ? '、選択中' : ''}${lockedLabel}`}>
@@ -638,7 +656,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
                   transform: visualTransform,
                   color: element.color,
                   borderWidth: element.symbolType === 'rectangle' || element.symbolType === 'circle' ? element.strokeWidth : undefined,
-                  fontSize: element.symbolType === 'cross' ? 49 * element.scale : undefined,
+                  fontSize: element.symbolType === 'cross' ? 49 * Math.min(element.scaleX ?? element.scale, element.scaleY ?? element.scale) : undefined,
                 }}
               >{element.symbolType === 'cross' ? '✕' : ''}</span>
             )}
@@ -672,14 +690,14 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         </svg>
       )}
 
-      {selectedSymbol && (() => {
-        const dimensions = getElementDimensions(selectedSymbol)
+      {selectedResizable && (() => {
+        const dimensions = getElementDimensions(selectedResizable)
         return <button
           type="button"
           className="element-resize-handle export-hidden"
-          aria-label="選択中の図形の大きさを変更"
-          style={{ left: selectedSymbol.x + dimensions.width - 10, top: selectedSymbol.y + dimensions.height - 10 }}
-          onPointerDown={(event) => beginSymbolResize(event, selectedSymbol)}
+          aria-label="選択中の要素の大きさを変更"
+          style={{ left: selectedResizable.x + dimensions.width - 10, top: selectedResizable.y + dimensions.height - 10 }}
+          onPointerDown={(event) => beginElementResize(event, selectedResizable)}
         />
       })()}
 

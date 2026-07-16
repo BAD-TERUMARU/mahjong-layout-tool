@@ -15,7 +15,6 @@ interface ToolbarProps {
   canEditProperties: boolean
   showGrid: boolean
   snapToGrid: boolean
-  screenshotGrid: boolean
   placementMode: PlacementMode
   onClear: () => void
   onUndo: () => void
@@ -34,14 +33,9 @@ interface ToolbarProps {
   onToggleGrid: () => void
   onToggleSnap: () => void
   onSaveLocal: () => void
-  onLoadLocal: () => void
   onOpenSavedLayouts: () => void
-  onExportJson: () => void
-  onImportJson: () => void
   onAddImage: () => void
   onAddText: (text: string) => void
-  onScreenshot: () => void
-  onToggleScreenshotGrid: () => void
   onHelp: () => void
 }
 
@@ -258,15 +252,7 @@ export const Toolbar = (props: ToolbarProps) => {
           <div className="tool-group">
             <span className="tool-group-label">保存</span>
             <ToolButton label="保存" icon="↓" onClick={props.onSaveLocal} />
-            <ToolButton label="復元" icon="↑" onClick={props.onLoadLocal} />
             <ToolButton label="保存ページ" icon="▤" onClick={props.onOpenSavedLayouts} />
-            <ToolButton label="JSON書出" icon="{}" onClick={props.onExportJson} />
-            <ToolButton label="JSON読込" icon="…" onClick={props.onImportJson} />
-          </div>
-          <div className="tool-group">
-            <span className="tool-group-label">PNG出力</span>
-            <label className="capture-grid-toggle"><input type="checkbox" checked={props.screenshotGrid} onChange={props.onToggleScreenshotGrid} />PNGにグリッド</label>
-            <ToolButton label="PNG保存" icon="▣" onClick={props.onScreenshot} />
           </div>
         </>}
       </div>

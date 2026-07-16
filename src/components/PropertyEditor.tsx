@@ -24,10 +24,7 @@ interface PropertyEditorProps {
     color?: string
     fontSize?: number
     fontFamily?: string
-    scale?: number
     strokeWidth?: number
-    width?: number
-    height?: number
     opacity?: number
   }) => void
   onClose: () => void
@@ -38,10 +35,7 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
   const [color, setColor] = useState(element.kind === 'image' ? '#244a40' : element.color)
   const [fontSize, setFontSize] = useState(element.kind === 'text' ? element.fontSize : 22)
   const [fontFamily, setFontFamily] = useState(element.kind === 'text' ? element.fontFamily : 'serif')
-  const [scale, setScale] = useState(element.kind === 'symbol' ? element.scale : 1)
   const [strokeWidth, setStrokeWidth] = useState(element.kind === 'symbol' || element.kind === 'drawing' ? element.strokeWidth : 4)
-  const [width, setWidth] = useState(element.kind === 'image' ? element.width : 240)
-  const [height, setHeight] = useState(element.kind === 'image' ? element.height : 180)
   const [opacity, setOpacity] = useState(element.kind === 'image' ? element.opacity : 1)
   const [customColors, setCustomColors] = useState(readCustomColors)
 
@@ -74,10 +68,7 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
       color: element.kind === 'image' ? undefined : color,
       fontSize: element.kind === 'text' ? fontSize : undefined,
       fontFamily: element.kind === 'text' ? fontFamily : undefined,
-      scale: element.kind === 'symbol' ? scale : undefined,
       strokeWidth: element.kind === 'symbol' || element.kind === 'drawing' ? strokeWidth : undefined,
-      width: element.kind === 'image' ? width : undefined,
-      height: element.kind === 'image' ? height : undefined,
       opacity: element.kind === 'image' ? opacity : undefined,
     })
   }
@@ -119,16 +110,10 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
         )}
 
         {element.kind === 'symbol' && (
-          <>
-            <label>
-              サイズ倍率
-              <input type="number" min="0.5" max="3" step="0.1" value={scale} onChange={(event) => setScale(Number(event.target.value))} />
-            </label>
-            <label>
-              線の太さ
-              <input type="number" min="1" max="12" value={strokeWidth} onChange={(event) => setStrokeWidth(Number(event.target.value))} />
-            </label>
-          </>
+          <label>
+            線の太さ
+            <input type="number" min="1" max="12" value={strokeWidth} onChange={(event) => setStrokeWidth(Number(event.target.value))} />
+          </label>
         )}
 
         {element.kind === 'drawing' && (
@@ -139,20 +124,10 @@ export const PropertyEditor = ({ element, onSave, onClose }: PropertyEditorProps
         )}
 
         {element.kind === 'image' && (
-          <>
-            <label>
-              横幅
-              <input type="number" min="32" max="3000" value={width} onChange={(event) => setWidth(Number(event.target.value))} />
-            </label>
-            <label>
-              高さ
-              <input type="number" min="32" max="3000" value={height} onChange={(event) => setHeight(Number(event.target.value))} />
-            </label>
-            <label>
-              透明度（10〜100%）
-              <input type="number" min="10" max="100" value={Math.round(opacity * 100)} onChange={(event) => setOpacity(Number(event.target.value) / 100)} />
-            </label>
-          </>
+          <label>
+            透明度（10〜100%）
+            <input type="number" min="10" max="100" value={Math.round(opacity * 100)} onChange={(event) => setOpacity(Number(event.target.value) / 100)} />
+          </label>
         )}
 
         {element.kind !== 'image' && (

@@ -57,7 +57,11 @@ export const getElementDimensions = (element: CanvasElement) => {
   }
   if (element.kind === 'symbol') {
     const dimensions = getSymbolBaseDimensions(element.symbolType)
-    return rotateDimensions(dimensions.width * element.scale, dimensions.height * element.scale, element.rotation)
+    return rotateDimensions(
+      dimensions.width * (element.scaleX ?? element.scale),
+      dimensions.height * (element.scaleY ?? element.scale),
+      element.rotation,
+    )
   }
   const width = Math.max(44, Math.ceil(element.text.length * element.fontSize * 1.05) + 16)
   const height = Math.ceil(element.fontSize * 1.5) + 8
