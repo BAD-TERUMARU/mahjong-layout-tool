@@ -120,7 +120,7 @@
 .text-color-swatches .add-custom-color { order: 1; margin-left: auto; color: #31574d; background: #fff; font: 800 14px/1 sans-serif; }
 .custom-color-picker-anchor { position: relative; order: 2; }
 .text-color-swatches .custom-color-detail { width: 24px; min-width: 24px; color: #31574d; background: linear-gradient(135deg, #fff4ad, #9de2d1 48%, #88b8f5); font: 800 9px/1 sans-serif; }
-.custom-color-picker { position: absolute; z-index: 80; top: 23px; right: 0; width: 210px; padding: 9px; border: 1px solid #aac5ba; border-radius: 7px; background: #fff; box-shadow: 0 9px 24px rgba(19, 54, 45, .22); }
+.custom-color-picker { position: fixed; z-index: 10050; top: 50%; left: 50%; right: auto; width: min(300px, calc(100vw - 32px)); box-sizing: border-box; padding: 14px; border: 1px solid #aac5ba; border-radius: 10px; background: #fff; box-shadow: 0 18px 50px rgba(19, 54, 45, .32); transform: translate(-50%, -50%); }
 .custom-color-picker-header { display: flex; align-items: center; justify-content: space-between; color: #31574d; font-size: 11px; }
 .custom-color-picker-header button { width: 20px; min-width: 20px; height: 20px; min-height: 20px; color: #607a72; background: transparent; border: 0; font-size: 17px; }
 .custom-color-picker-controls { display: grid; grid-template-columns: 54px 1fr; gap: 8px; align-items: end; margin-top: 8px; }
@@ -130,6 +130,10 @@
 .custom-color-code input { width: 100%; height: 27px; border: 1px solid #cbd7d0; border-radius: 4px; padding: 0 6px; color: #31574d; font: 12px ui-monospace, monospace; }
 .text-color-swatches .custom-color-apply { width: 100%; height: 28px; margin-top: 8px; border-color: #23826a; border-radius: 4px; color: #fff; background: #23826a; font: 800 11px sans-serif; }
 .text-color-swatches .custom-color-apply:disabled { opacity: .45; cursor: not-allowed; }
+.custom-color-manager { display: grid; gap: 5px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #e0e8e3; color: #607a72; font-size: 10px; }
+.custom-color-manager > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.custom-color-manager span { color: #8b9a95; font-size: 10px; }
+.text-color-swatches .custom-color-delete { width: 24px; min-width: 24px; height: 24px; min-height: 24px; border: 2px solid #fff; border-radius: 50%; color: #fff; font: 800 13px/1 sans-serif; box-shadow: 0 0 0 1px #aebfb7; }
 
 .text-tool input {
   width: 130px;
@@ -268,6 +272,7 @@
 .selection-marquee { position: absolute; z-index: 9998; border: 1.5px solid #18745d; background: rgba(51, 157, 126, .16); pointer-events: none; }
 .workspace-text-editor { position: absolute; z-index: 10000; min-width: 180px; height: 38px; padding: 0 10px; border: 2px solid #18745d; border-radius: 6px; outline: none; background: #fff; color: #172c27; box-shadow: 0 4px 18px rgba(18, 73, 61, .2); font: 600 18px "Yu Mincho", serif; }
 .workspace-resize-handle { position: absolute; right: 0; bottom: 0; z-index: 10001; width: 24px; height: 24px; border: 0; border-radius: 10px 0 4px 0; background: linear-gradient(135deg, transparent 38%, #55776e 39%, #55776e 48%, transparent 49%, transparent 61%, #55776e 62%, #55776e 71%, transparent 72%); cursor: nwse-resize; touch-action: none; }
+.element-resize-handle { position: absolute; z-index: 10002; width: 20px; height: 20px; padding: 0; border: 2px solid #fff; border-radius: 4px; background: #18745d; box-shadow: 0 0 0 1px #0d5746, 0 2px 5px rgba(0,0,0,.2); cursor: nwse-resize; touch-action: none; }
 .is-capturing .export-hidden { display: none !important; }
 .is-capturing .placed-item::after { display: none !important; }
 .is-capturing .placed-item::before, .is-capturing .lock-badge { display: none !important; }
@@ -301,7 +306,7 @@
 .custom-color-empty { color: #81918b; font-size: 10px; font-weight: 500; }
 .property-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; }
 .property-actions > button { min-width: 105px; height: 39px; border: 1px solid #c8d5ce; border-radius: 7px; background: #fff; color: #49655d; cursor: pointer; }
-.property-actions .primary-button { width: auto; border: 0; color: #fff; }
+.property-actions .primary-button { width: auto; border: 0; color: #fff; background: linear-gradient(135deg, #134d40, #0c372f); }
 
 .saved-layouts-backdrop { z-index: 400; }
 .saved-layouts-dialog { width: min(820px, 100%); max-height: min(760px, calc(100vh - 40px)); position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; background: #fbfaf4; box-shadow: 0 25px 80px rgba(0, 0, 0, .42); }
@@ -332,7 +337,10 @@
 .saved-layout-card-actions { display: grid; gap: 6px; }
 .saved-layout-card-actions button { min-width: 86px; height: 34px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; }
 .saved-layout-load { border: 0; background: #174e41; color: #fff; }
+.saved-layout-rename { border: 1px solid #b7cbc1; background: #f6faf7; color: #285f50; }
+.saved-layout-share { border: 1px solid #b9cae0; background: #f4f8ff; color: #235a94; }
 .saved-layout-delete { border: 1px solid #d9bbb6; background: #fff; color: #a04438; }
+.saved-layout-name-edit { width: 100%; height: 30px; box-sizing: border-box; border: 1px solid #3b836f; border-radius: 5px; padding: 0 7px; color: #214a3f; font: 600 13px Inter, sans-serif; }
 .saved-layout-empty { min-height: 170px; display: grid; place-content: center; gap: 7px; text-align: center; }
 .saved-layout-empty strong { color: #365a50; font: 700 17px "Yu Mincho", serif; }
 .saved-layout-empty span { color: #84958f; font-size: 11px; }

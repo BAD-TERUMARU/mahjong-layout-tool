@@ -56,6 +56,7 @@ interface WorkspaceProps {
   onToggleTileFace: (id: string) => void
   onOpenContextMenu: (state: ContextMenuState) => void
   onResize: (width: number, height: number) => void
+  onResizeSymbol: (id: string, scale: number) => void
   onBeginDrag: () => void
   onEndDrag: () => void
 }
@@ -92,6 +93,16 @@ interface DrawingState {
   points: CanvasPoint[]
 }
 
+interface SymbolResizeState {
+  pointerId: number
+  id: string
+  startClientX: number
+  startClientY: number
+  startScale: number
+  baseWidth: number
+  baseHeight: number
+}
+
 const isPalettePoint = (clientX: number, clientY: number) => {
   const palette = document.querySelector<HTMLElement>('.palette-panel')
   if (!palette) return false
@@ -123,6 +134,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   const marqueeRef = useRef<MarqueeState | null>(null)
   const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null)
   const drawingRef = useRef<DrawingState | null>(null)
+  const symbolResizeRef = useRef<SymbolResizeState | null>(null)
   const [marquee, setMarquee] = useState<MarqueeState | null>(null)
   const [editor, setEditor] = useState<TextEditorState | null>(null)
   const [drawing, setDrawing] = useState<DrawingState | null>(null)
@@ -237,6 +249,48 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     }
   }, [moveElementDrag, endElementDrag])
 
+  const beginSymbolResize = (event: ReactPointerEvent<HTMLButtonElement>, element: CanvasElement) => {
+    if (event.button !== 0 || element.kind !== 'symbol' || element.locked) return
+    event.preventDefault()
+    event.stopPropagation()
+    const base = getSymbolBaseDimensions(element.symbolType)
+    event.currentTarget.setPointerCapture(event.pointerId)
+    symbolResizeRef.current = {
+      pointerId: event.pointerId,
+      id: element.id,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startScale: element.scale,
+      baseWidth: base.width,
+      baseHeight: base.height,
+    }
+    props.onBeginDrag()
+  }
+
+  useEffect(() => {
+    const moveSymbolResize = (event: PointerEvent) => {
+      const resize = symbolResizeRef.current
+      if (!resize || resize.pointerId !== event.pointerId) return
+      const delta = Math.max(event.clientX - resize.startClientX, event.clientY - resize.startClientY)
+      const baseSize = Math.max(resize.baseWidth, resize.baseHeight)
+      propsRef.current.onResizeSymbol(resize.id, clamp(resize.startScale + delta / baseSize, 0.5, 3))
+    }
+    const endSymbolResize = (event: PointerEvent) => {
+      const resize = symbolResizeRef.current
+      if (!resize || resize.pointerId !== event.pointerId) return
+      symbolResizeRef.current = null
+      propsRef.current.onEndDrag()
+    }
+    window.addEventListener('pointermove', moveSymbolResize)
+    window.addEventListener('pointerup', endSymbolResize)
+    window.addEventListener('pointercancel', endSymbolResize)
+    return () => {
+      window.removeEventListener('pointermove', moveSymbolResize)
+      window.removeEventListener('pointerup', endSymbolResize)
+      window.removeEventListener('pointercancel', endSymbolResize)
+    }
+  }, [])
+
   const canvasPoint = (event: ReactPointerEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect()
     return {
@@ -247,7 +301,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
 
   const beginCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return
-    if (props.placementMode === 'draw') {
+    if (props.placementMode === 'draw' || props.placementMode === 'line') {
       const point = canvasPoint(event)
       const state = { pointerId: event.pointerId, points: [point] }
       drawingRef.current = state
@@ -277,7 +331,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       const point = canvasPoint(event)
       const previous = activeDrawing.points.at(-1)
       if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 2) {
-        const next = { ...activeDrawing, points: [...activeDrawing.points, point] }
+        const next = { ...activeDrawing, points: props.placementMode === 'line' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point] }
         drawingRef.current = next
         setDrawing(next)
       }
@@ -300,7 +354,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     const activeDrawing = drawingRef.current
     if (activeDrawing?.pointerId === event.pointerId) {
       const point = canvasPoint(event)
-      const points = [...activeDrawing.points, point]
+      const points = props.placementMode === 'line' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point]
       drawingRef.current = null
       setDrawing(null)
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -330,7 +384,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
 
     if (props.placementMode === 'text') {
       setEditor({ x: state.startX, y: state.startY, value: '' })
-    } else if (props.placementMode !== 'select' && props.placementMode !== 'draw') {
+    } else if (props.placementMode !== 'select' && props.placementMode !== 'draw' && props.placementMode !== 'line') {
       props.onPlaceSymbol(props.placementMode, state.startX, state.startY)
     } else {
       props.onClearSelection()
@@ -408,11 +462,12 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     width: Math.abs(marquee.currentX - marquee.startX),
     height: Math.abs(marquee.currentY - marquee.startY),
   } : undefined
+  const selectedSymbol = props.scene.elements.find((element): element is CanvasElement & { kind: 'symbol' } => element.kind === 'symbol' && element.selected && !element.locked) ?? null
 
   return (
     <div
       ref={ref}
-      className={`workspace-canvas${props.showGrid ? ' show-grid' : ''}${props.placementMode === 'draw' ? ' drawing-mode' : ''}`}
+      className={`workspace-canvas${props.showGrid ? ' show-grid' : ''}${props.placementMode === 'draw' || props.placementMode === 'line' ? ' drawing-mode' : ''}`}
       style={{ width: props.scene.width, height: props.scene.height }}
       onPointerDown={beginCanvasPointer}
       onPointerMove={moveCanvasPointer}
@@ -616,6 +671,17 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           <polyline points={drawing.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}
+
+      {selectedSymbol && (() => {
+        const dimensions = getElementDimensions(selectedSymbol)
+        return <button
+          type="button"
+          className="element-resize-handle export-hidden"
+          aria-label="選択中の図形の大きさを変更"
+          style={{ left: selectedSymbol.x + dimensions.width - 10, top: selectedSymbol.y + dimensions.height - 10 }}
+          onPointerDown={(event) => beginSymbolResize(event, selectedSymbol)}
+        />
+      })()}
 
       <button
         type="button"

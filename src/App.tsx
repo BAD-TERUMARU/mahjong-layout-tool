@@ -229,6 +229,16 @@ const readNamedSavedLayouts = (): NamedSavedLayout[] => {
   }
 }
 
+const readSharedLayout = (): SavedLayout | null => {
+  try {
+    const encoded = new URLSearchParams(window.location.hash.slice(1)).get('layout')
+    if (!encoded) return null
+    return parseSavedLayout(decodeURIComponent(escape(atob(encoded))))
+  } catch {
+    return null
+  }
+}
+
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -270,7 +280,7 @@ const loadImageFile = (file: File) => new Promise<{ src: string; width: number; 
 })
 
 const App = () => {
-  const [initialLayout] = useState(() => parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY)))
+  const [initialLayout] = useState(() => readSharedLayout() ?? parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY)))
   const history = useSceneHistory(initialLayout?.scene ?? EMPTY_SCENE)
   const scene = history.scene
   const [rulerCount, setRulerCount] = useState(() => initialLayout?.scene.elements.filter((element) => element.kind === 'tile').length ?? 0)
@@ -759,6 +769,15 @@ const App = () => {
     })
   }
 
+  const resizeSymbol = (id: string, scale: number) => {
+    history.updateLive({
+      ...scene,
+      elements: scene.elements.map((element) => element.id === id && element.kind === 'symbol' && !element.locked
+        ? { ...element, scale: clamp(scale, 0.5, 3) }
+        : element),
+    })
+  }
+
   const openContextMenu = (state: ContextMenuState) => {
     if (state.elementId === null) {
       setContextMenu(state)
@@ -848,6 +867,38 @@ const App = () => {
     } catch {
       notify('保存ページを更新できませんでした')
     }
+  }
+
+  const renameNamedLayout = (id: string, name: string) => {
+    const next = savedLayouts.map((item) => item.id === id ? { ...item, name } : item)
+    try {
+      localStorage.setItem(SAVED_LAYOUTS_KEY, JSON.stringify(next))
+      setSavedLayouts(next)
+      notify('保存ページのタイトルを更新しました')
+    } catch {
+      notify('保存ページのタイトルを更新できませんでした')
+    }
+  }
+
+  const shareNamedLayout = async (id: string) => {
+    const saved = savedLayouts.find((item) => item.id === id)
+    if (!saved) return
+    try {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(saved.layout))))
+      const url = `${window.location.origin}${window.location.pathname}#${new URLSearchParams({ layout: encoded }).toString()}`
+      if (navigator.share) await navigator.share({ title: saved.name, text: '麻雀牌レイアウトツールの共有ページです', url })
+      else await navigator.clipboard.writeText(url)
+      notify('共有リンクを作成しました')
+    } catch {
+      notify('共有リンクを作成できませんでした')
+    }
+  }
+
+  const saveQuickLayout = () => {
+    saveLocal()
+    const name = `保存 ${new Date().toLocaleString('ja-JP')}`
+    saveNamedLayout(name)
+    setSavedLayoutsOpen(true)
   }
 
   const exportJson = () => {
@@ -1045,7 +1096,7 @@ const App = () => {
         onSetPlacementMode={setPlacementMode}
         onToggleGrid={() => setShowGrid((value) => !value)}
         onToggleSnap={() => setSnapToGrid((value) => !value)}
-        onSaveLocal={saveLocal}
+        onSaveLocal={saveQuickLayout}
         onLoadLocal={loadLocal}
         onOpenSavedLayouts={() => setSavedLayoutsOpen(true)}
         onExportJson={exportJson}
@@ -1109,6 +1160,7 @@ const App = () => {
               onToggleTileFace={toggleTileFace}
               onOpenContextMenu={openContextMenu}
               onResize={(width, height) => resizeWorkspace(width, height, true)}
+              onResizeSymbol={resizeSymbol}
               onBeginDrag={history.beginTransaction}
               onEndDrag={history.endTransaction}
             />
@@ -1189,6 +1241,8 @@ const App = () => {
           onSave={saveNamedLayout}
           onLoad={loadNamedLayout}
           onDelete={deleteNamedLayout}
+          onRename={renameNamedLayout}
+          onShare={shareNamedLayout}
           onClose={() => setSavedLayoutsOpen(false)}
         />
       )}

@@ -123,6 +123,12 @@ export const Toolbar = (props: ToolbarProps) => {
     setIsColorPickerOpen(false)
   }
 
+  const removeCustomColor = (color: string) => {
+    const next = customColors.filter((value) => value !== color)
+    setCustomColors(next)
+    saveCustomColors(next)
+  }
+
   return (
     <section className="toolbar" aria-label="編集ツール">
       <div className="ribbon-tabs" role="tablist" aria-label="リボンタブ">
@@ -197,6 +203,10 @@ export const Toolbar = (props: ToolbarProps) => {
                       </label>
                     </div>
                     <button type="button" className="custom-color-apply" onClick={applyCustomColor} disabled={!/^#[0-9a-f]{6}$/i.test(pickerColor.trim())}>色を適用して追加</button>
+                    <div className="custom-color-manager">
+                      <strong>登録済みの色</strong>
+                      {customColors.length ? <div>{customColors.map((color) => <button key={color} type="button" className="custom-color-delete" style={{ backgroundColor: color }} aria-label={`${color}を削除`} title={`${color}を削除`} onClick={() => removeCustomColor(color)}>×</button>)}</div> : <span>まだ登録されていません</span>}
+                    </div>
                   </div>}
                 </div>
                 {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={activeColor.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の色`} onClick={() => updateColor(color)} />)}
@@ -213,6 +223,7 @@ export const Toolbar = (props: ToolbarProps) => {
             <ToolButton label="選択" icon="↖" onClick={() => props.onSetPlacementMode('select')} active={props.placementMode === 'select'} />
             <ToolButton label="クリック文字" icon="T" onClick={() => props.onSetPlacementMode('text')} active={props.placementMode === 'text'} />
             <ToolButton label="線を描く" icon="✎" onClick={() => props.onSetPlacementMode('draw')} active={props.placementMode === 'draw'} />
+            <ToolButton label="直線" icon="╱" onClick={() => props.onSetPlacementMode('line')} active={props.placementMode === 'line'} />
             <ToolButton label="長方形" icon="▭" onClick={() => props.onSetPlacementMode('rectangle')} active={props.placementMode === 'rectangle'} />
             <ToolButton label="三角形" icon="△" onClick={() => props.onSetPlacementMode('triangle')} active={props.placementMode === 'triangle'} />
             <ToolButton label="バツ" icon="✕" onClick={() => props.onSetPlacementMode('cross')} active={props.placementMode === 'cross'} />
@@ -246,7 +257,7 @@ export const Toolbar = (props: ToolbarProps) => {
         {activeTab === 'file' && <>
           <div className="tool-group">
             <span className="tool-group-label">保存</span>
-            <ToolButton label="ブラウザ保存" icon="↓" onClick={props.onSaveLocal} />
+            <ToolButton label="保存" icon="↓" onClick={props.onSaveLocal} />
             <ToolButton label="復元" icon="↑" onClick={props.onLoadLocal} />
             <ToolButton label="保存ページ" icon="▤" onClick={props.onOpenSavedLayouts} />
             <ToolButton label="JSON書出" icon="{}" onClick={props.onExportJson} />

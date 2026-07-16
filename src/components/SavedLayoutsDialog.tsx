@@ -8,6 +8,8 @@ interface SavedLayoutsDialogProps {
   onSave: (name: string) => void
   onLoad: (id: string) => void
   onDelete: (id: string) => void
+  onRename: (id: string, name: string) => void
+  onShare: (id: string) => void
   onClose: () => void
 }
 
@@ -55,6 +57,8 @@ const LayoutPreview = ({ saved }: { saved: NamedSavedLayout }) => {
 
 export const SavedLayoutsDialog = (props: SavedLayoutsDialogProps) => {
   const [name, setName] = useState(`保存ページ ${props.layouts.length + 1}`)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
   const { onClose } = props
 
   useEffect(() => {
@@ -70,6 +74,17 @@ export const SavedLayoutsDialog = (props: SavedLayoutsDialogProps) => {
     if (!trimmed) return
     props.onSave(trimmed)
     setName(`保存ページ ${props.layouts.length + 2}`)
+  }
+
+  const beginRename = (saved: NamedSavedLayout) => {
+    setEditingId(saved.id)
+    setEditingName(saved.name)
+  }
+
+  const commitRename = () => {
+    if (!editingId || !editingName.trim()) return
+    props.onRename(editingId, editingName.trim())
+    setEditingId(null)
   }
 
   return (
@@ -101,12 +116,14 @@ export const SavedLayoutsDialog = (props: SavedLayoutsDialogProps) => {
               <article className="saved-layout-card" key={saved.id}>
                 <LayoutPreview saved={saved} />
                 <div className="saved-layout-card-copy">
-                  <strong>{saved.name}</strong>
+                  {editingId === saved.id ? <input className="saved-layout-name-edit" aria-label="保存ページのタイトル" value={editingName} onChange={(event) => setEditingName(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && commitRename()} autoFocus /> : <strong>{saved.name}</strong>}
                   <span>{new Date(saved.savedAt).toLocaleString('ja-JP')}</span>
                   <small>{count}個の配置物 ・ {saved.layout.scene.width} × {saved.layout.scene.height}px</small>
                 </div>
                 <div className="saved-layout-card-actions">
                   <button type="button" className="saved-layout-load" onClick={() => props.onLoad(saved.id)}>呼び出す</button>
+                  {editingId === saved.id ? <button type="button" className="saved-layout-rename" onClick={commitRename}>タイトル保存</button> : <button type="button" className="saved-layout-rename" onClick={() => beginRename(saved)}>タイトル編集</button>}
+                  <button type="button" className="saved-layout-share" onClick={() => props.onShare(saved.id)}>共有</button>
                   <button type="button" className="saved-layout-delete" onClick={() => props.onDelete(saved.id)}>削除</button>
                 </div>
               </article>

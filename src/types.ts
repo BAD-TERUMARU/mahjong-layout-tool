@@ -4,7 +4,7 @@ export type Rotation = 0 | 90 | 180 | 270
 
 export type SymbolType = 'rectangle' | 'cross' | 'circle' | 'triangle'
 
-export type PlacementMode = 'select' | 'text' | 'draw' | SymbolType
+export type PlacementMode = 'select' | 'text' | 'draw' | 'line' | SymbolType
 
 export interface CanvasPoint {
   x: number
