@@ -60,7 +60,7 @@
 .ribbon-tabs button { flex: 0 0 auto; height: 31px; padding: 0 15px; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; color: #3e5d53; background: transparent; font: 700 11px Inter, "Yu Gothic UI", sans-serif; cursor: pointer; }
 .ribbon-tabs button:hover { background: rgba(255, 255, 255, .65); }
 .ribbon-tabs button.active { position: relative; top: 1px; color: #174f40; background: rgba(251, 250, 244, .96); border-color: #d3dfd8; }
-.ribbon-content { display: flex; align-items: stretch; min-height: 70px; padding: 5px 20px 7px; overflow-x: auto; scrollbar-width: thin; }
+.ribbon-content { display: flex; align-items: stretch; min-height: 82px; padding: 5px 20px 7px; overflow-x: auto; scrollbar-width: thin; }
 
 .tool-group {
   flex: 0 0 auto;
@@ -98,7 +98,7 @@
 .tool-button.danger:hover:not(:disabled) { background: #f7e7e4; border-color: #e2bbb4; color: #a23b2d; }
 .tool-button:disabled, .text-add-button:disabled { opacity: .36; cursor: not-allowed; }
 
-.font-ribbon { align-self: stretch; display: grid; grid-template-columns: minmax(112px, 150px); grid-template-rows: 15px 30px; gap: 3px 5px; min-width: 154px; margin-left: 5px; padding-left: 10px; border-left: 1px solid rgba(21, 65, 55, .12); }
+.font-ribbon { align-self: stretch; display: grid; grid-template-columns: minmax(112px, 150px); grid-template-rows: 15px 30px auto; gap: 3px 5px; min-width: 154px; margin-left: 5px; padding-left: 10px; border-left: 1px solid rgba(21, 65, 55, .12); }
 .font-ribbon-label { grid-column: 1 / -1; color: #84958f; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
 .font-ribbon select, .font-ribbon input[type="number"] { height: 29px; border: 1px solid #cbd7d0; border-radius: 4px; padding: 0 6px; color: #31574d; background: #fff; font-size: 11px; }
 .font-ribbon select:disabled, .font-ribbon input:disabled, .font-ribbon button:disabled { opacity: .42; cursor: not-allowed; }
@@ -109,6 +109,12 @@
 .font-ribbon-controls label { position: relative; display: grid; place-items: center; width: 28px; height: 29px; overflow: hidden; border: 1px solid #cbd7d0; border-radius: 4px; color: #b13f34; background: #fff; font-weight: 900; cursor: pointer; }
 .font-ribbon-controls label > span { position: relative; z-index: 1; pointer-events: none; border-bottom: 3px solid currentColor; line-height: 14px; }
 .font-ribbon-controls input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.text-color-palette { grid-column: 1 / -1; display: flex; align-items: center; min-height: 20px; }
+.text-color-swatches { display: flex; align-items: center; gap: 3px; }
+.text-color-swatches button { width: 16px; min-width: 16px; height: 16px; min-height: 16px; padding: 0; border: 1px solid rgba(23, 44, 39, .25); border-radius: 3px; cursor: pointer; box-shadow: none; }
+.text-color-swatches button.active { outline: 2px solid #23826a; outline-offset: 1px; }
+.text-color-swatches .custom { border-radius: 50%; }
+.text-color-swatches .add-custom-color { color: #31574d; background: #fff; font: 800 14px/1 sans-serif; }
 
 .text-tool input {
   width: 130px;
@@ -358,7 +364,7 @@ kbd { padding: 2px 5px; border: 1px solid #cbd4cd; border-bottom-width: 2px; bor
   .header-status strong { font-size: 20px; }
   .ribbon-tabs { padding-inline: 10px; }
   .ribbon-tabs button { padding-inline: 12px; }
-  .ribbon-content { min-height: 70px; padding: 5px 10px 7px; }
+  .ribbon-content { min-height: 82px; padding: 5px 10px 7px; }
   .tool-group { padding-inline: 9px; }
   .font-ribbon { min-width: 150px; }
   .tool-button { min-height: 36px; }

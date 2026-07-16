@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { PlacementMode } from '../types'
+import { TEXT_COLOR_PALETTE, readCustomColors, saveCustomColors } from '../utils/colors'
 
 interface ToolbarProps {
   canUndo: boolean
@@ -74,12 +75,21 @@ const ToolButton = ({
 export const Toolbar = (props: ToolbarProps) => {
   const [text, setText] = useState('')
   const [activeTab, setActiveTab] = useState<RibbonTab>('home')
+  const [customColors, setCustomColors] = useState(readCustomColors)
 
   const addText = () => {
     const value = text.trim()
     if (!value) return
     props.onAddText(value)
     setText('')
+  }
+
+  const addCurrentColorToPalette = () => {
+    const color = props.textStyle.color.toLowerCase()
+    if (customColors.includes(color)) return
+    const next = [...customColors, color].slice(-24)
+    setCustomColors(next)
+    saveCustomColors(next)
   }
 
   return (
@@ -135,6 +145,13 @@ export const Toolbar = (props: ToolbarProps) => {
               <button type="button" aria-label="文字サイズを大きく" onClick={() => props.onUpdateTextStyle({ fontSize: Math.min(72, props.textStyle.fontSize + 2) })}>A+</button>
               <label title="文字色"><span>A</span><input type="color" aria-label="文字色" value={props.textStyle.color} onChange={(event) => props.onUpdateTextStyle({ color: event.target.value })} /></label>
             </div>
+            {props.isEditingSelectedText && <div className="text-color-palette" aria-label="文字色パレット">
+              <div className="text-color-swatches">
+                {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={props.textStyle.color.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の文字色`} onClick={() => props.onUpdateTextStyle({ color })} />)}
+                {customColors.map((color) => <button key={color} type="button" className={`custom${props.textStyle.color.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の文字色`} onClick={() => props.onUpdateTextStyle({ color })} />)}
+                <button type="button" className="add-custom-color" title="現在の文字色をカスタムパレットへ追加" aria-label="現在の文字色をカスタムパレットへ追加" onClick={addCurrentColorToPalette}>＋</button>
+              </div>
+            </div>}
           </div>
         </div>}
 
