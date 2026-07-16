@@ -117,10 +117,10 @@
 .text-color-swatches button { width: 16px; min-width: 16px; height: 16px; min-height: 16px; padding: 0; border: 1px solid rgba(23, 44, 39, .25); border-radius: 3px; cursor: pointer; box-shadow: none; }
 .text-color-swatches button.active { outline: 2px solid #23826a; outline-offset: 1px; }
 .text-color-swatches .custom { border-radius: 50%; }
-.text-color-swatches .add-custom-color { color: #31574d; background: #fff; font: 800 14px/1 sans-serif; }
-.custom-color-picker-anchor { position: relative; }
+.text-color-swatches .add-custom-color { order: 1; margin-left: auto; color: #31574d; background: #fff; font: 800 14px/1 sans-serif; }
+.custom-color-picker-anchor { position: relative; order: 2; }
 .text-color-swatches .custom-color-detail { width: 24px; min-width: 24px; color: #31574d; background: linear-gradient(135deg, #fff4ad, #9de2d1 48%, #88b8f5); font: 800 9px/1 sans-serif; }
-.custom-color-picker { position: absolute; z-index: 80; top: 23px; left: 0; width: 210px; padding: 9px; border: 1px solid #aac5ba; border-radius: 7px; background: #fff; box-shadow: 0 9px 24px rgba(19, 54, 45, .22); }
+.custom-color-picker { position: absolute; z-index: 80; top: 23px; right: 0; width: 210px; padding: 9px; border: 1px solid #aac5ba; border-radius: 7px; background: #fff; box-shadow: 0 9px 24px rgba(19, 54, 45, .22); }
 .custom-color-picker-header { display: flex; align-items: center; justify-content: space-between; color: #31574d; font-size: 11px; }
 .custom-color-picker-header button { width: 20px; min-width: 20px; height: 20px; min-height: 20px; color: #607a72; background: transparent; border: 0; font-size: 17px; }
 .custom-color-picker-controls { display: grid; grid-template-columns: 54px 1fr; gap: 8px; align-items: end; margin-top: 8px; }
