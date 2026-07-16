@@ -273,6 +273,7 @@ const App = () => {
   const [initialLayout] = useState(() => parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY)))
   const history = useSceneHistory(initialLayout?.scene ?? EMPTY_SCENE)
   const scene = history.scene
+  const [rulerCount, setRulerCount] = useState(() => initialLayout?.scene.elements.filter((element) => element.kind === 'tile').length ?? 0)
   const [showGrid, setShowGrid] = useState(initialLayout?.settings.showGrid ?? true)
   const [snapToGrid, setSnapToGrid] = useState(initialLayout?.settings.snapToGrid ?? false)
   const [screenshotGrid, setScreenshotGrid] = useState(true)
@@ -358,6 +359,7 @@ const App = () => {
       width,
       elements: [...scene.elements, tile],
     })
+    setRulerCount((count) => Math.min(13, count + 1))
   }
 
   const selectElement = (id: string, additive: boolean) => {
@@ -393,6 +395,12 @@ const App = () => {
 
   const moveElements = (positions: ElementPosition[]) => {
     const byId = new Map(positions.map((position) => [position.id, position]))
+    const movedTile = scene.elements.some((element) => {
+      const position = byId.get(element.id)
+      return element.kind === 'tile' && !element.locked && position !== undefined
+        && (position.x !== element.x || position.y !== element.y)
+    })
+    if (movedTile) setRulerCount(0)
     history.updateLive({
       ...scene,
       elements: scene.elements.map((element) => {
@@ -406,6 +414,8 @@ const App = () => {
     const targetIds = new Set(ids)
     const elements = scene.elements.filter((element) => !targetIds.has(element.id) || element.locked)
     if (elements.length === scene.elements.length) return
+    const removedTiles = scene.elements.filter((element) => element.kind === 'tile' && targetIds.has(element.id) && !element.locked).length
+    setRulerCount((count) => Math.max(0, count - removedTiles))
     history.commit({ ...scene, elements })
     notify('牌一覧へドロップした配置物を削除しました')
   }
@@ -481,6 +491,7 @@ const App = () => {
         ...tileIds.map((tileId, index) => makeTile(tileId, startX + index * (TILE_WIDTH + TILE_GAP), 76, zStart + index)),
       ],
     })
+    setRulerCount(count)
     notify(`${count}枚の配牌を生成し、理牌しました`)
   }
 
@@ -766,6 +777,7 @@ const App = () => {
 
   const loadLayout = (layout: SavedLayout, message: string) => {
     history.load(layout.scene)
+    setRulerCount(layout.scene.elements.filter((element) => element.kind === 'tile').length)
     setShowGrid(layout.settings.showGrid)
     setSnapToGrid(layout.settings.snapToGrid)
     setPlacementMode('select')
@@ -981,7 +993,10 @@ const App = () => {
         snapToGrid={snapToGrid}
         screenshotGrid={screenshotGrid}
         placementMode={placementMode}
-        onClear={() => history.commit({ ...EMPTY_SCENE, width: scene.width, height: scene.height })}
+        onClear={() => {
+          history.commit({ ...EMPTY_SCENE, width: scene.width, height: scene.height })
+          setRulerCount(0)
+        }}
         onUndo={history.undo}
         onRedo={history.redo}
         onAlign={alignTiles}
@@ -1030,10 +1045,11 @@ const App = () => {
             </div>
           </div>
           <div className="workspace-scroll">
-            <div className="workspace-tile-ruler" style={{ width: scene.width }} aria-label="牌の位置目盛り。1から13">
+            <div className="workspace-tile-ruler" style={{ width: scene.width }} aria-label={`牌の枚数 ${rulerCount}枚。13枚基準`}>
+              <div className="workspace-tile-ruler-title">牌数メモリ <strong>{rulerCount}<small>/13枚</small></strong></div>
               <div className="workspace-tile-ruler-track">
                 {Array.from({ length: 13 }, (_, index) => (
-                  <span key={index} className={index < tileCount ? 'filled' : ''} title={`${index + 1}枚目`}>{index + 1}</span>
+                  <span key={index} className={index < rulerCount ? 'filled' : ''} title={`${index + 1}枚目`}>{index + 1}</span>
                 ))}
               </div>
             </div>
