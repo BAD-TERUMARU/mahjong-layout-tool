@@ -1024,14 +1024,6 @@ const App = () => {
               <span>{selected.length ? `${selected.length}件を選択中` : placementMode === 'select' ? '空白をドラッグして範囲選択' : '同じツールを連続配置できます（Escで解除）'}</span>
             </div>
             <div className="workspace-meta-actions">
-              <div className="tile-count-ruler" aria-label={`牌の枚数 ${tileCount}枚。13枚基準`}>
-                <div className="tile-count-ruler-heading"><span>牌数メモリ</span><strong>{tileCount}<small>/13枚</small></strong></div>
-                <div className="tile-count-ruler-slots">
-                  {Array.from({ length: 13 }, (_, index) => (
-                    <i key={index} className={index < tileCount ? 'filled' : ''} title={`${index + 1}枚目`} />
-                  ))}
-                </div>
-              </div>
               <WorkspaceSizeControls
                 width={scene.width}
                 height={scene.height}
@@ -1041,6 +1033,14 @@ const App = () => {
             </div>
           </div>
           <div className="workspace-scroll">
+            <div className="workspace-tile-ruler" style={{ width: scene.width }} aria-label={`牌の枚数 ${tileCount}枚。13枚基準`}>
+              <div className="workspace-tile-ruler-title">牌数メモリ <strong>{tileCount}/13枚</strong></div>
+              <div className="workspace-tile-ruler-track">
+                {Array.from({ length: 13 }, (_, index) => (
+                  <span key={index} className={index < tileCount ? 'filled' : ''} title={`${index + 1}枚目`}>{index + 1}</span>
+                ))}
+              </div>
+            </div>
             <Workspace
               ref={workspaceRef}
               scene={scene}
