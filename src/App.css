@@ -132,12 +132,17 @@
 .custom-color-preview input { position: absolute; width: 54px; height: 44px; opacity: 0; cursor: pointer; }
 .custom-color-code { display: grid; gap: 3px; color: #607a72; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
 .custom-color-code input { width: 100%; height: 27px; border: 1px solid #cbd7d0; border-radius: 4px; padding: 0 6px; color: #31574d; font: 12px ui-monospace, monospace; }
-.text-color-swatches .custom-color-apply { width: 100%; height: 28px; margin-top: 8px; border-color: #23826a; border-radius: 4px; color: #fff; background: #23826a; font: 800 11px sans-serif; }
-.text-color-swatches .custom-color-apply:disabled { opacity: .45; cursor: not-allowed; }
+.custom-color-picker .custom-color-apply { width: 100%; min-width: 0; height: 28px; margin-top: 8px; border: 1px solid #23826a; border-radius: 4px; color: #fff; background: #23826a; font: 800 11px sans-serif; }
+.custom-color-picker .custom-color-apply:disabled { opacity: .45; cursor: not-allowed; }
 .custom-color-manager { display: grid; gap: 5px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #e0e8e3; color: #607a72; font-size: 10px; }
 .custom-color-manager > div { display: flex; flex-wrap: wrap; gap: 5px; }
 .custom-color-manager span { color: #8b9a95; font-size: 10px; }
-.text-color-swatches .custom-color-delete { width: 24px; min-width: 24px; height: 24px; min-height: 24px; border: 2px solid #fff; border-radius: 50%; color: #fff; font: 800 13px/1 sans-serif; box-shadow: 0 0 0 1px #aebfb7; }
+.custom-color-picker .custom-color-delete { width: 24px; min-width: 24px; height: 24px; min-height: 24px; padding: 0; border: 2px solid #fff; border-radius: 50%; color: #fff; font: 800 13px/1 sans-serif; box-shadow: 0 0 0 1px #aebfb7; }
+.font-ribbon-controls .custom-color-picker label { position: relative; display: grid; width: auto; height: auto; overflow: visible; border: 0; border-radius: 0; background: transparent; font-weight: inherit; }
+.font-ribbon-controls .custom-color-picker .custom-color-preview { height: 44px; overflow: hidden; border: 1px solid #adc5bb; border-radius: 5px; color: #fff; font-size: 9px; font-weight: 800; }
+.font-ribbon-controls .custom-color-picker .custom-color-code { color: #607a72; font-size: 9px; font-weight: 800; }
+.font-ribbon-controls .custom-color-picker button { min-width: 0; }
+.font-ribbon-controls .custom-color-picker-header button { width: 20px; min-width: 20px; height: 20px; min-height: 20px; padding: 0; border: 0; color: #607a72; background: transparent; font-size: 17px; }
 
 .text-tool input {
   width: 130px;
