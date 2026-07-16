@@ -10,6 +10,7 @@ interface ToolbarProps {
   canEditText: boolean
   textStyle: { fontFamily: string; fontSize: number; color: string }
   isEditingSelectedText: boolean
+  selectedShapeColor: string | null
   canDuplicate: boolean
   canEditProperties: boolean
   showGrid: boolean
@@ -25,6 +26,7 @@ interface ToolbarProps {
   onRotate: () => void
   onEditSelectedText: () => void
   onUpdateTextStyle: (style: { fontFamily?: string; fontSize?: number; color?: string }) => void
+  onUpdateSelectedShapeColor: (color: string) => void
   onEditProperties: () => void
   onRandomHand: (count: 13 | 14) => void
   onShuffle: () => void
@@ -90,8 +92,15 @@ export const Toolbar = (props: ToolbarProps) => {
     setText('')
   }
 
+  const activeColor = props.selectedShapeColor ?? props.textStyle.color
+  const isEditingShape = props.selectedShapeColor !== null
+  const updateColor = (color: string) => {
+    if (isEditingShape) props.onUpdateSelectedShapeColor(color)
+    else props.onUpdateTextStyle({ color })
+  }
+
   const addCurrentColorToPalette = () => {
-    const color = props.textStyle.color.toLowerCase()
+    const color = activeColor.toLowerCase()
     if (customColors.includes(color)) return
     const next = [...customColors, color].slice(-24)
     setCustomColors(next)
@@ -125,11 +134,12 @@ export const Toolbar = (props: ToolbarProps) => {
           <ToolButton label="選択を削除" icon="⌫" onClick={props.onDeleteSelected} disabled={!props.hasSelection} />
           <ToolButton label="すべて削除" icon="×" onClick={props.onClear} disabled={!props.hasItems} danger />
           <div className="font-ribbon" aria-label="フォント">
-            <span className="font-ribbon-label">{props.isEditingSelectedText ? '選択中の文字' : '新規文字の既定スタイル'}</span>
+            <span className="font-ribbon-label">{props.isEditingSelectedText ? '選択中の文字' : isEditingShape ? '選択中の図形（色）' : '新規文字の既定スタイル'}</span>
             <select
               aria-label="フォント"
               value={props.textStyle.fontFamily}
               onChange={(event) => props.onUpdateTextStyle({ fontFamily: event.target.value })}
+              disabled={isEditingShape}
             >
               <option value="serif">明朝体</option>
               <option value="sans-serif">ゴシック体</option>
@@ -139,7 +149,7 @@ export const Toolbar = (props: ToolbarProps) => {
               <option value="monospace">等幅</option>
             </select>
             <div className="font-ribbon-controls">
-              <button type="button" aria-label="文字サイズを小さく" onClick={() => props.onUpdateTextStyle({ fontSize: Math.max(12, props.textStyle.fontSize - 2) })}>A−</button>
+              <button type="button" aria-label="文字サイズを小さく" disabled={isEditingShape} onClick={() => props.onUpdateTextStyle({ fontSize: Math.max(12, props.textStyle.fontSize - 2) })}>A−</button>
               <input
                 type="number"
                 min="12"
@@ -147,14 +157,15 @@ export const Toolbar = (props: ToolbarProps) => {
                 aria-label="文字サイズ"
                 value={props.textStyle.fontSize}
                 onChange={(event) => props.onUpdateTextStyle({ fontSize: Number(event.target.value) })}
+                disabled={isEditingShape}
               />
-              <button type="button" aria-label="文字サイズを大きく" onClick={() => props.onUpdateTextStyle({ fontSize: Math.min(72, props.textStyle.fontSize + 2) })}>A+</button>
-              <label title="文字色"><span>A</span><input type="color" aria-label="文字色" value={props.textStyle.color} onChange={(event) => props.onUpdateTextStyle({ color: event.target.value })} /></label>
+              <button type="button" aria-label="文字サイズを大きく" disabled={isEditingShape} onClick={() => props.onUpdateTextStyle({ fontSize: Math.min(72, props.textStyle.fontSize + 2) })}>A+</button>
+              <label title={isEditingShape ? '図形の色' : '文字色'}><span>A</span><input type="color" aria-label={isEditingShape ? '図形の色' : '文字色'} value={activeColor} onChange={(event) => updateColor(event.target.value)} /></label>
             </div>
             <div className="text-color-palette" aria-label="文字色パレット">
               <div className="text-color-swatches">
-                {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={props.textStyle.color.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の文字色`} onClick={() => props.onUpdateTextStyle({ color })} />)}
-                {customColors.map((color) => <button key={color} type="button" className={`custom${props.textStyle.color.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の文字色`} onClick={() => props.onUpdateTextStyle({ color })} />)}
+                {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={activeColor.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の色`} onClick={() => updateColor(color)} />)}
+                {customColors.map((color) => <button key={color} type="button" className={`custom${activeColor.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の色`} onClick={() => updateColor(color)} />)}
                 <button type="button" className="add-custom-color" title="現在の文字色をカスタムパレットへ追加" aria-label="現在の文字色をカスタムパレットへ追加" onClick={addCurrentColorToPalette}>＋</button>
               </div>
             </div>

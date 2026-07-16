@@ -961,6 +961,7 @@ const App = () => {
 
   const selected = scene.elements.filter((element) => element.selected)
   const selectedText = selected.length === 1 && selected[0].kind === 'text' && !selected[0].locked ? selected[0] : null
+  const selectedSymbol = selected.length === 1 && selected[0].kind === 'symbol' && !selected[0].locked ? selected[0] : null
   const selectedEditable = selected.length === 1 && selected[0].kind !== 'tile' && !selected[0].locked ? selected[0] : null
   const tileCount = scene.elements.filter((element) => element.kind === 'tile').length
   const contextElement = contextMenu ? scene.elements.find((element) => element.id === contextMenu.elementId) ?? null : null
@@ -990,6 +991,7 @@ const App = () => {
         canEditText={Boolean(selectedText)}
         textStyle={selectedText ? { fontFamily: selectedText.fontFamily, fontSize: selectedText.fontSize, color: selectedText.color } : defaultTextStyle}
         isEditingSelectedText={Boolean(selectedText)}
+        selectedShapeColor={selectedSymbol?.color ?? null}
         canDuplicate={selected.length > 0}
         canEditProperties={Boolean(selectedEditable)}
         showGrid={showGrid}
@@ -1018,6 +1020,7 @@ const App = () => {
             color: style.color ?? current.color,
           }))
         }}
+        onUpdateSelectedShapeColor={(color) => selectedSymbol && saveProperties(selectedSymbol.id, { color })}
         onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}
