@@ -102,8 +102,6 @@ export const Toolbar = (props: ToolbarProps) => {
     saveCustomColors(next)
   }
 
-  const addCurrentColorToPalette = () => addColorToPalette(activeColor.toLowerCase())
-
   const openCustomColorPicker = () => {
     setPickerColor(activeColor.toLowerCase())
     setIsColorPickerOpen(true)
@@ -176,36 +174,36 @@ export const Toolbar = (props: ToolbarProps) => {
                 disabled={isEditingShape}
               />
               <button type="button" aria-label="文字サイズを大きく" disabled={isEditingShape} onClick={() => props.onUpdateTextStyle({ fontSize: Math.min(72, props.textStyle.fontSize + 2) })}>A+</button>
-              <label title={isEditingShape ? '図形の色' : '文字色'}><span>A</span><input type="color" aria-label={isEditingShape ? '図形の色' : '文字色'} value={activeColor} onChange={(event) => updateColor(event.target.value)} /></label>
+              <div className="custom-color-picker-anchor">
+                <button type="button" className="font-color-button" aria-label={isEditingShape ? '図形の色を選択してカスタム色へ追加' : '文字色を選択してカスタム色へ追加'} aria-expanded={isColorPickerOpen} onClick={openCustomColorPicker}>
+                  <span>A</span><i style={{ backgroundColor: activeColor }} />
+                </button>
+                {isColorPickerOpen && <div className="custom-color-picker" role="dialog" aria-label="カスタム色の追加">
+                  <div className="custom-color-picker-header">
+                    <strong>カスタム色を追加</strong>
+                    <button type="button" aria-label="カスタム色の選択を閉じる" onClick={() => setIsColorPickerOpen(false)}>×</button>
+                  </div>
+                  <div className="custom-color-picker-controls">
+                    <label className="custom-color-preview" style={{ backgroundColor: /^#[0-9a-f]{6}$/i.test(pickerColor) ? pickerColor : '#ffffff' }}>
+                      <span>色を選択</span>
+                      <input type="color" aria-label="詳細な色を選択" value={/^#[0-9a-f]{6}$/i.test(pickerColor) ? pickerColor : '#172c27'} onChange={(event) => setPickerColor(event.target.value)} />
+                    </label>
+                    <label className="custom-color-code">HEX
+                      <input aria-label="HEXカラーコード" value={pickerColor} onChange={(event) => setPickerColor(event.target.value)} maxLength={7} placeholder="#RRGGBB" />
+                    </label>
+                  </div>
+                  <button type="button" className="custom-color-apply" onClick={applyCustomColor} disabled={!/^#[0-9a-f]{6}$/i.test(pickerColor.trim())}>色を適用して追加</button>
+                  <div className="custom-color-manager">
+                    <strong>登録済みの色</strong>
+                    {customColors.length ? <div>{customColors.map((color) => <button key={color} type="button" className="custom-color-delete" style={{ backgroundColor: color }} aria-label={`${color}を削除`} title={`${color}を削除`} onClick={() => removeCustomColor(color)}>×</button>)}</div> : <span>まだ登録されていません</span>}
+                  </div>
+                </div>}
+              </div>
             </div>
             <div className="text-color-palette" aria-label="文字色パレット">
               <div className="text-color-swatches">
-                <div className="custom-color-picker-anchor">
-                  <button type="button" className="custom-color-detail" aria-label="詳細な色を選択して追加" aria-expanded={isColorPickerOpen} onClick={openCustomColorPicker}>色</button>
-                  {isColorPickerOpen && <div className="custom-color-picker" role="dialog" aria-label="カスタム色の追加">
-                    <div className="custom-color-picker-header">
-                      <strong>カスタム色を追加</strong>
-                      <button type="button" aria-label="カスタム色の選択を閉じる" onClick={() => setIsColorPickerOpen(false)}>×</button>
-                    </div>
-                    <div className="custom-color-picker-controls">
-                      <label className="custom-color-preview" style={{ backgroundColor: /^#[0-9a-f]{6}$/i.test(pickerColor) ? pickerColor : '#ffffff' }}>
-                        <span>色を選択</span>
-                        <input type="color" aria-label="詳細な色を選択" value={/^#[0-9a-f]{6}$/i.test(pickerColor) ? pickerColor : '#172c27'} onChange={(event) => setPickerColor(event.target.value)} />
-                      </label>
-                      <label className="custom-color-code">HEX
-                        <input aria-label="HEXカラーコード" value={pickerColor} onChange={(event) => setPickerColor(event.target.value)} maxLength={7} placeholder="#RRGGBB" />
-                      </label>
-                    </div>
-                    <button type="button" className="custom-color-apply" onClick={applyCustomColor} disabled={!/^#[0-9a-f]{6}$/i.test(pickerColor.trim())}>色を適用して追加</button>
-                    <div className="custom-color-manager">
-                      <strong>登録済みの色</strong>
-                      {customColors.length ? <div>{customColors.map((color) => <button key={color} type="button" className="custom-color-delete" style={{ backgroundColor: color }} aria-label={`${color}を削除`} title={`${color}を削除`} onClick={() => removeCustomColor(color)}>×</button>)}</div> : <span>まだ登録されていません</span>}
-                    </div>
-                  </div>}
-                </div>
                 {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={activeColor.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の色`} onClick={() => updateColor(color)} />)}
                 {customColors.map((color) => <button key={color} type="button" className={`custom${activeColor.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の色`} onClick={() => updateColor(color)} />)}
-                <button type="button" className="add-custom-color" title="現在の文字色をカスタムパレットへ追加" aria-label="現在の文字色をカスタムパレットへ追加" onClick={addCurrentColorToPalette}>＋</button>
               </div>
             </div>
           </div>
