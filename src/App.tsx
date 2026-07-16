@@ -327,13 +327,10 @@ const App = () => {
 
   const addTile = (tileId: string, dropX?: number, dropY?: number) => {
     const isDropped = dropX !== undefined || dropY !== undefined
-    const latestAutoTile = scene.elements
-      .filter((element): element is TileElement => element.kind === 'tile' && element.autoOrder !== undefined)
-      .reduce<TileElement | null>((latest, tile) => !latest || (tile.autoOrder ?? -1) > (latest.autoOrder ?? -1) ? tile : latest, null)
-    const defaultX = latestAutoTile ? (latestAutoTile.autoX ?? latestAutoTile.x) + TILE_WIDTH + TILE_GAP : 24
-    const defaultY = latestAutoTile ? (latestAutoTile.autoY ?? latestAutoTile.y) : 32
-    let x = dropX ?? defaultX
-    const y = dropY ?? defaultY
+    // 牌一覧からのクリック追加は、常に左上の初期位置から開始する。
+    // 途中で牌を移動しても追加の開始位置は変えず、既存牌だけを避ける。
+    let x = dropX ?? 24
+    const y = dropY ?? 32
 
     if (!isDropped) {
       const overlapsTile = (candidateX: number) => scene.elements.some((element) => element.kind === 'tile'
