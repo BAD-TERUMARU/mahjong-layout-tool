@@ -18,13 +18,8 @@ import type {
   TextElement,
 } from '../types'
 import {
-  clamp,
   getElementDimensions,
   getSymbolBaseDimensions,
-  MAX_WORKSPACE_HEIGHT,
-  MAX_WORKSPACE_WIDTH,
-  MIN_WORKSPACE_HEIGHT,
-  MIN_WORKSPACE_WIDTH,
   snap,
   SYMBOL_LABELS,
   TILE_HEIGHT,
@@ -57,7 +52,6 @@ interface WorkspaceProps {
   onFinishTextEditing: () => void
   onToggleTileFace: (id: string) => void
   onOpenContextMenu: (state: ContextMenuState) => void
-  onResize: (width: number, height: number) => void
   onResizeElement: (id: string, width: number, height: number) => void
   onBeginDrag: () => void
   onEndDrag: () => void
@@ -69,7 +63,6 @@ interface DragState {
   startClientY: number
   primaryId: string
   starts: ElementPosition[]
-  bounds: { left: number; top: number; right: number; bottom: number }
   moved: boolean
   inTrash: boolean
 }
@@ -104,6 +97,14 @@ interface ElementResizeState {
   startHeight: number
 }
 
+interface PanState {
+  pointerId: number
+  startClientX: number
+  startClientY: number
+  startX: number
+  startY: number
+}
+
 const isPalettePoint = (clientX: number, clientY: number) => {
   const palette = document.querySelector<HTMLElement>('.palette-panel')
   if (!palette) return false
@@ -133,12 +134,25 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   propsRef.current = props
   const dragRef = useRef<DragState | null>(null)
   const marqueeRef = useRef<MarqueeState | null>(null)
-  const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null)
   const drawingRef = useRef<DrawingState | null>(null)
   const elementResizeRef = useRef<ElementResizeState | null>(null)
+  const panRef = useRef<PanState | null>(null)
+  const spaceDownRef = useRef(false)
   const [marquee, setMarquee] = useState<MarqueeState | null>(null)
   const [editor, setEditor] = useState<TextEditorState | null>(null)
   const [drawing, setDrawing] = useState<DrawingState | null>(null)
+  const [camera, setCamera] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => { if (event.code === 'Space') spaceDownRef.current = true }
+    const up = (event: KeyboardEvent) => { if (event.code === 'Space') spaceDownRef.current = false }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
 
   useEffect(() => {
     if (!props.editTextRequest) return
@@ -150,6 +164,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
 
   const beginElementDrag = (event: ReactPointerEvent<HTMLButtonElement>, element: CanvasElement) => {
     if (event.button !== 0) return
+    if (spaceDownRef.current) return
     event.stopPropagation()
     props.onSelectElement(element.id, event.shiftKey)
     if (element.locked) return
@@ -162,23 +177,12 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         ? [...selectedElements, element]
         : [element]
     const uniqueGroup = group.filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
-    const bounds = uniqueGroup.reduce((result, item) => {
-      const dimensions = getElementDimensions(item)
-      return {
-        left: Math.min(result.left, item.x),
-        top: Math.min(result.top, item.y),
-        right: Math.max(result.right, item.x + dimensions.width),
-        bottom: Math.max(result.bottom, item.y + dimensions.height),
-      }
-    }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity })
-
     dragRef.current = {
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
       primaryId: element.id,
       starts: uniqueGroup.map((item) => ({ id: item.id, x: item.x, y: item.y })),
-      bounds,
       moved: false,
       inTrash: false,
     }
@@ -210,10 +214,6 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     const rawY = primary.y + clientY - drag.startClientY
     let deltaX = snap(rawX, currentProps.snapToGrid) - primary.x
     let deltaY = snap(rawY, currentProps.snapToGrid) - primary.y
-    // 右・下方向は親側でキャンバスを自動拡張する。左・上方向だけは負の座標を防ぐ。
-    deltaX = Math.max(deltaX, -drag.bounds.left)
-    deltaY = Math.max(deltaY, -drag.bounds.top)
-
     currentProps.onMoveElements(drag.starts.map((item) => ({
       id: item.id,
       x: Math.round(item.x + deltaX),
@@ -274,14 +274,14 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       if (!resize || resize.pointerId !== event.pointerId) return
       const deltaX = event.clientX - resize.startClientX
       const deltaY = event.clientY - resize.startClientY
-      let width = clamp(resize.startWidth + deltaX, 24, propsRef.current.scene.width)
-      let height = clamp(resize.startHeight + deltaY, 24, propsRef.current.scene.height)
+      let width = Math.max(resize.startWidth + deltaX, 24)
+      let height = Math.max(resize.startHeight + deltaY, 24)
       if (event.shiftKey) {
         const xScale = width / resize.startWidth
         const yScale = height / resize.startHeight
         const factor = Math.abs(xScale - 1) >= Math.abs(yScale - 1) ? xScale : yScale
-        width = clamp(resize.startWidth * factor, 24, propsRef.current.scene.width)
-        height = clamp(resize.startHeight * factor, 24, propsRef.current.scene.height)
+        width = Math.max(resize.startWidth * factor, 24)
+        height = Math.max(resize.startHeight * factor, 24)
       }
       propsRef.current.onResizeElement(resize.id, width, height)
     }
@@ -304,12 +304,18 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   const canvasPoint = (event: ReactPointerEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect()
     return {
-      x: clamp(event.clientX - bounds.left, 0, props.scene.width),
-      y: clamp(event.clientY - bounds.top, 0, props.scene.height),
+      x: event.clientX - bounds.left - camera.x,
+      y: event.clientY - bounds.top - camera.y,
     }
   }
 
   const beginCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button === 1 || (event.button === 0 && spaceDownRef.current)) {
+      event.preventDefault()
+      panRef.current = { pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startX: camera.x, startY: camera.y }
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
     if (event.button !== 0) return
     if (props.placementMode === 'draw' || props.placementMode === 'line') {
       const point = canvasPoint(event)
@@ -336,6 +342,11 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   }
 
   const moveCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pan = panRef.current
+    if (pan?.pointerId === event.pointerId) {
+      setCamera({ x: pan.startX + event.clientX - pan.startClientX, y: pan.startY + event.clientY - pan.startClientY })
+      return
+    }
     const activeDrawing = drawingRef.current
     if (activeDrawing?.pointerId === event.pointerId) {
       const point = canvasPoint(event)
@@ -361,6 +372,11 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   }
 
   const finishCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (panRef.current?.pointerId === event.pointerId) {
+      panRef.current = null
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+      return
+    }
     const activeDrawing = drawingRef.current
     if (activeDrawing?.pointerId === event.pointerId) {
       const point = canvasPoint(event)
@@ -409,37 +425,6 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     props.onFinishTextEditing()
   }
 
-  const beginResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return
-    event.stopPropagation()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    resizeRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      width: props.scene.width,
-      height: props.scene.height,
-    }
-    props.onBeginDrag()
-  }
-
-  const moveResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const resize = resizeRef.current
-    if (!resize) return
-    props.onResize(
-      clamp(resize.width + event.clientX - resize.startX, MIN_WORKSPACE_WIDTH, MAX_WORKSPACE_WIDTH),
-      clamp(resize.height + event.clientY - resize.startY, MIN_WORKSPACE_HEIGHT, MAX_WORKSPACE_HEIGHT),
-    )
-  }
-
-  const endResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!resizeRef.current) return
-    resizeRef.current = null
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-    props.onEndDrag()
-  }
-
   const openContextMenu = (event: React.MouseEvent<HTMLButtonElement>, element: CanvasElement) => {
     event.preventDefault()
     event.stopPropagation()
@@ -449,8 +434,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       elementId: element.id,
       clientX: event.clientX,
       clientY: event.clientY,
-      canvasX: clamp(event.clientX - canvas.left, 0, props.scene.width),
-      canvasY: clamp(event.clientY - canvas.top, 0, props.scene.height),
+      canvasX: event.clientX - canvas.left - camera.x,
+      canvasY: event.clientY - canvas.top - camera.y,
     })
   }
 
@@ -461,14 +446,14 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       elementId: null,
       clientX: event.clientX,
       clientY: event.clientY,
-      canvasX: clamp(event.clientX - canvas.left, 0, props.scene.width),
-      canvasY: clamp(event.clientY - canvas.top, 0, props.scene.height),
+      canvasX: event.clientX - canvas.left - camera.x,
+      canvasY: event.clientY - canvas.top - camera.y,
     })
   }
 
   const marqueeStyle = marquee ? {
-    left: Math.min(marquee.startX, marquee.currentX),
-    top: Math.min(marquee.startY, marquee.currentY),
+    left: Math.min(marquee.startX, marquee.currentX) + camera.x,
+    top: Math.min(marquee.startY, marquee.currentY) + camera.y,
     width: Math.abs(marquee.currentX - marquee.startX),
     height: Math.abs(marquee.currentY - marquee.startY),
   } : undefined
@@ -493,8 +478,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         event.preventDefault()
         const tileId = event.dataTransfer.getData('application/x-mahjong-tile')
         const bounds = event.currentTarget.getBoundingClientRect()
-        const x = event.clientX - bounds.left
-        const y = event.clientY - bounds.top
+        const x = event.clientX - bounds.left - camera.x
+        const y = event.clientY - bounds.top - camera.y
         if (TILE_MAP.has(tileId)) {
           props.onDropTile(tileId, x - TILE_WIDTH / 2, y - TILE_HEIGHT / 2)
           return
@@ -524,8 +509,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           type: 'button' as const,
           className: `placed-item placed-${element.kind}${element.selected ? ' selected' : ''}${element.locked ? ' locked' : ''}`,
           style: {
-            left: element.x,
-            top: element.y,
+            left: element.x + camera.x,
+            top: element.y + camera.y,
             zIndex: element.zIndex,
             width: dimensions.width,
             height: dimensions.height,
@@ -671,7 +656,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       {editor && (
         <input
           className="workspace-text-editor export-hidden"
-          style={{ left: editor.x, top: editor.y }}
+          style={{ left: editor.x + camera.x, top: editor.y + camera.y }}
           value={editor.value}
           autoFocus
           placeholder="文字を入力"
@@ -688,7 +673,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       {marquee?.visible && <div className="selection-marquee export-hidden" style={marqueeStyle} />}
 
       {drawing && (
-        <svg className="drawing-preview export-hidden" viewBox={`0 0 ${props.scene.width} ${props.scene.height}`} aria-hidden="true">
+        <svg className="drawing-preview export-hidden" viewBox={`0 0 ${props.scene.width} ${props.scene.height}`} style={{ transform: `translate(${camera.x}px, ${camera.y}px)` }} aria-hidden="true">
           <polyline points={drawing.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}
@@ -699,20 +684,11 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           type="button"
           className="element-resize-handle export-hidden"
           aria-label="選択中の要素の大きさを変更"
-          style={{ left: selectedResizable.x + dimensions.width - 10, top: selectedResizable.y + dimensions.height - 10 }}
+          style={{ left: selectedResizable.x + camera.x + dimensions.width - 10, top: selectedResizable.y + camera.y + dimensions.height - 10 }}
           onPointerDown={(event) => beginElementResize(event, selectedResizable)}
         />
       })()}
 
-      <button
-        type="button"
-        className="workspace-resize-handle export-hidden"
-        aria-label="作業エリアのサイズをドラッグして変更"
-        onPointerDown={beginResize}
-        onPointerMove={moveResize}
-        onPointerUp={endResize}
-        onPointerCancel={endResize}
-      />
     </div>
   )
 })

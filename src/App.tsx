@@ -77,8 +77,8 @@ const parseElement = (value: unknown): CanvasElement | null => {
   if (typeof item.id !== 'string' || typeof item.x !== 'number' || typeof item.y !== 'number') return null
   const base = {
     id: item.id,
-    x: Math.max(0, Math.round(item.x)),
-    y: Math.max(0, Math.round(item.y)),
+    x: Math.round(item.x),
+    y: Math.round(item.y),
     rotation: isRotation(item.rotation) ? item.rotation : 0 as Rotation,
     selected: Boolean(item.selected),
     zIndex: typeof item.zIndex === 'number' ? item.zIndex : 1,
@@ -340,11 +340,10 @@ const App = () => {
       while (overlapsTile(x)) x += TILE_WIDTH + TILE_GAP
     }
 
-    const width = clamp(Math.max(scene.width, x + TILE_WIDTH + 24), MIN_WORKSPACE_WIDTH, MAX_WORKSPACE_WIDTH)
     const tile = makeTile(
       tileId,
-      clamp(isDropped ? snap(x, snapToGrid) : x, 0, width - TILE_WIDTH),
-      clamp(isDropped ? snap(y, snapToGrid) : y, 0, scene.height - TILE_HEIGHT),
+      isDropped ? snap(x, snapToGrid) : x,
+      isDropped ? snap(y, snapToGrid) : y,
       nextZIndex(),
     )
     if (isDropped) {
@@ -354,7 +353,6 @@ const App = () => {
     }
     history.commit({
       ...scene,
-      width,
       elements: [...scene.elements, tile],
     })
     setRulerCount((count) => Math.min(13, count + 1))
@@ -403,12 +401,9 @@ const App = () => {
         const position = byId.get(element.id)
         return position && !element.locked ? { ...element, x: position.x, y: position.y } : element
       })
-    const bounds = getSceneContentBounds({ ...scene, elements })
     history.updateLive({
       ...scene,
       elements,
-      width: Math.max(scene.width, bounds.width),
-      height: Math.max(scene.height, bounds.height),
     })
   }
 
@@ -445,12 +440,7 @@ const App = () => {
         if (!element.selected || element.locked) return element
         const rotation = ((element.rotation + 90) % 360) as Rotation
         const rotated = { ...element, rotation } as CanvasElement
-        const dimensions = getElementDimensions(rotated)
-        return {
-          ...rotated,
-          x: clamp(rotated.x, 0, scene.width - dimensions.width),
-          y: clamp(rotated.y, 0, scene.height - dimensions.height),
-        }
+        return rotated
       }),
     })
   }
@@ -528,9 +518,6 @@ const App = () => {
     }
     const textCount = scene.elements.filter((element) => element.kind === 'text').length
     const item = { ...makeText(text, x, y ?? Math.min(scene.height - 50, 180 + textCount * 48), nextZIndex()), ...defaultTextStyle }
-    const dimensions = getElementDimensions(item)
-    item.x = clamp(item.x, 0, scene.width - dimensions.width)
-    item.y = clamp(item.y, 0, scene.height - dimensions.height)
     history.commit({ ...scene, elements: [...scene.elements, item] })
   }
 
@@ -538,8 +525,8 @@ const App = () => {
     // 新規文字と同じ既定色を、これから追加する図形にも使用する。
     const item = { ...makeSymbol(symbolType, x, y, nextZIndex()), color: defaultTextStyle.color }
     const dimensions = getElementDimensions(item)
-    item.x = clamp(snap(x - dimensions.width / 2, snapToGrid), 0, scene.width - dimensions.width)
-    item.y = clamp(snap(y - dimensions.height / 2, snapToGrid), 0, scene.height - dimensions.height)
+    item.x = snap(x - dimensions.width / 2, snapToGrid)
+    item.y = snap(y - dimensions.height / 2, snapToGrid)
     history.commit({ ...scene, elements: [...scene.elements, item] })
   }
 
@@ -550,10 +537,10 @@ const App = () => {
     const maxX = Math.max(...points.map((point) => point.x))
     const maxY = Math.max(...points.map((point) => point.y))
     const padding = 8
-    const x = clamp(Math.floor(minX - padding), 0, scene.width)
-    const y = clamp(Math.floor(minY - padding), 0, scene.height)
-    const width = Math.max(16, Math.min(scene.width - x, Math.ceil(maxX - x + padding)))
-    const height = Math.max(16, Math.min(scene.height - y, Math.ceil(maxY - y + padding)))
+    const x = Math.floor(minX - padding)
+    const y = Math.floor(minY - padding)
+    const width = Math.max(16, Math.ceil(maxX - x + padding))
+    const height = Math.max(16, Math.ceil(maxY - y + padding))
     const relative = points.map((point) => ({ x: point.x - x, y: point.y - y }))
     const item = makeDrawing(relative, x, y, width, height, nextZIndex())
     history.commit({ ...scene, elements: [...scene.elements, { ...item, color: defaultTextStyle.color }] })
@@ -568,8 +555,8 @@ const App = () => {
       history.commitLatest((latestScene) => {
         const centerX = anchor?.x ?? latestScene.width / 2
         const centerY = anchor?.y ?? latestScene.height / 2
-        const x = clamp(centerX - width / 2, 0, latestScene.width - width)
-        const y = clamp(centerY - height / 2, 0, latestScene.height - height)
+        const x = centerX - width / 2
+        const y = centerY - height / 2
         const zIndex = Math.max(0, ...latestScene.elements.map((element) => element.zIndex)) + 1
         const item = makeImage(loaded.src, file.name || '貼り付け画像', width, height, x, y, zIndex)
         return {
@@ -651,17 +638,8 @@ const App = () => {
   const moveSelectedBy = (requestedX: number, requestedY: number) => {
     const selected = scene.elements.filter((element) => element.selected && !element.locked)
     if (!selected.length) return
-    const bounds = selected.reduce((result, element) => {
-      const dimensions = getElementDimensions(element)
-      return {
-        left: Math.min(result.left, element.x),
-        top: Math.min(result.top, element.y),
-        right: Math.max(result.right, element.x + dimensions.width),
-        bottom: Math.max(result.bottom, element.y + dimensions.height),
-      }
-    }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity })
-    const deltaX = clamp(requestedX, -bounds.left, scene.width - bounds.right)
-    const deltaY = clamp(requestedY, -bounds.top, scene.height - bounds.bottom)
+    const deltaX = requestedX
+    const deltaY = requestedY
     history.commit({
       ...scene,
       elements: scene.elements.map((element) => element.selected && !element.locked
@@ -731,12 +709,7 @@ const App = () => {
             opacity: clamp(properties.opacity ?? element.opacity, 0.1, 1),
           }
         }
-        const dimensions = getElementDimensions(updated)
-        return {
-          ...updated,
-          x: clamp(updated.x, 0, scene.width - dimensions.width),
-          y: clamp(updated.y, 0, scene.height - dimensions.height),
-        }
+        return updated
       }),
     })
     setPropertyElementId(null)
@@ -763,16 +736,13 @@ const App = () => {
           return { ...element, scaleX: clamp(width / base.width, 0.25, 12), scaleY: clamp(height / base.height, 0.25, 12) }
         }
         if (element.kind === 'image' || element.kind === 'drawing') {
-          return { ...element, width: clamp(width, 24, scene.width), height: clamp(height, 24, scene.height) }
+          return { ...element, width: Math.max(width, 24), height: Math.max(height, 24) }
         }
         return element
       })
-    const bounds = getSceneContentBounds({ ...scene, elements })
     history.updateLive({
       ...scene,
       elements,
-      width: Math.max(scene.width, bounds.width),
-      height: Math.max(scene.height, bounds.height),
     })
   }
 
@@ -785,17 +755,6 @@ const App = () => {
     if (!target) return
     if (!target.selected) selectElement(target.id, false)
     setContextMenu(state)
-  }
-
-  const resizeWorkspace = (width: number, height: number, live = false) => {
-    const bounds = getSceneContentBounds(scene)
-    const nextScene = {
-      ...scene,
-      width: clamp(Math.max(width, bounds.width), MIN_WORKSPACE_WIDTH, MAX_WORKSPACE_WIDTH),
-      height: clamp(Math.max(height, bounds.height), MIN_WORKSPACE_HEIGHT, MAX_WORKSPACE_HEIGHT),
-    }
-    if (live) history.updateLive(nextScene)
-    else history.commit(nextScene)
   }
 
   const loadLayout = (layout: SavedLayout, message: string) => {
@@ -1096,7 +1055,6 @@ const App = () => {
               onFinishTextEditing={() => setEditTextRequest(null)}
               onToggleTileFace={toggleTileFace}
               onOpenContextMenu={openContextMenu}
-              onResize={(width, height) => resizeWorkspace(width, height, true)}
               onResizeElement={resizeElement}
               onBeginDrag={history.beginTransaction}
               onEndDrag={history.endTransaction}
