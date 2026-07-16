@@ -987,6 +987,7 @@ const App = () => {
         hasItems={scene.elements.length > 0}
         hasSelection={selected.some((element) => !element.locked)}
         canEditText={Boolean(selectedText)}
+        selectedTextStyle={selectedText ? { fontFamily: selectedText.fontFamily, fontSize: selectedText.fontSize, color: selectedText.color } : null}
         canDuplicate={selected.length > 0}
         canEditProperties={Boolean(selectedEditable)}
         showGrid={showGrid}
@@ -1004,6 +1005,7 @@ const App = () => {
         onDuplicate={duplicateSelected}
         onRotate={rotateSelected}
         onEditSelectedText={() => selectedText && setEditTextRequest({ id: selectedText.id, token: Date.now() })}
+        onUpdateSelectedTextStyle={(style) => selectedText && saveProperties(selectedText.id, style)}
         onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}
