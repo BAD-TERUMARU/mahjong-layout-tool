@@ -1,3 +1,4 @@
+import type { DragEvent as ReactDragEvent } from 'react'
 import { TILE_GROUPS } from '../data/tiles'
 import type { PlacementMode, TileDefinition } from '../types'
 
@@ -33,6 +34,40 @@ const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; h
   { mode: 'line', icon: '╱', label: '直線', hint: 'ドラッグで描画' },
   { mode: 'text', icon: 'T', label: 'クリック文字', hint: '自由入力' },
 ]
+
+const setSymbolDragPreview = (event: ReactDragEvent<HTMLButtonElement>, mode: PlacementMode) => {
+  if (mode !== 'rectangle' && mode !== 'circle' && mode !== 'triangle' && mode !== 'cross') return
+  const width = mode === 'rectangle' ? 148 : mode === 'cross' ? 48 : 98
+  const height = 66
+  const preview = document.createElement('div')
+  preview.style.position = 'fixed'
+  preview.style.left = '-10000px'
+  preview.style.top = '-10000px'
+  preview.style.width = `${width}px`
+  preview.style.height = `${height}px`
+  preview.style.boxSizing = 'border-box'
+  preview.style.color = '#244a40'
+  preview.style.background = 'rgba(255,255,255,.92)'
+  preview.style.opacity = '.92'
+  preview.style.pointerEvents = 'none'
+  if (mode === 'rectangle') {
+    preview.style.border = '4px solid currentColor'
+    preview.style.borderRadius = '5px'
+  } else if (mode === 'circle') {
+    preview.style.border = '4px solid currentColor'
+    preview.style.borderRadius = '50%'
+  } else if (mode === 'cross') {
+    preview.style.display = 'grid'
+    preview.style.placeItems = 'center'
+    preview.style.font = '700 49px/1 "Yu Gothic", sans-serif'
+    preview.textContent = '✕'
+  } else {
+    preview.innerHTML = '<svg viewBox="0 0 99 66" width="98" height="66" aria-hidden="true"><polygon points="49.5,5 94,61 5,61" fill="none" stroke="#244a40" stroke-width="4" stroke-linejoin="round" /></svg>'
+  }
+  document.body.appendChild(preview)
+  event.dataTransfer.setDragImage(preview, width / 2, height / 2)
+  window.requestAnimationFrame(() => preview.remove())
+}
 
 export const TilePalette = ({ onAddTile, placementMode, trashActive, onSelectPlacementMode }: TilePaletteProps) => (
   <aside className={`palette-panel${trashActive ? ' trash-active' : ''}`} aria-label="牌一覧と削除エリア">
@@ -75,6 +110,7 @@ export const TilePalette = ({ onAddTile, placementMode, trashActive, onSelectPla
                 if (!choice.dragOnly) return
                 event.dataTransfer.setData('application/x-mahjong-symbol', choice.mode)
                 event.dataTransfer.effectAllowed = 'copy'
+                setSymbolDragPreview(event, choice.mode)
               }}
               aria-pressed={!choice.dragOnly && placementMode === choice.mode}
               aria-label={choice.dragOnly ? `${choice.label}をドラッグして配置` : `${choice.label}配置ツール`}

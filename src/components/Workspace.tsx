@@ -157,6 +157,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   const [camera, setCamera] = useState({ x: 0, y: 0 })
   const [draggingIds, setDraggingIds] = useState<Set<string>>(() => new Set())
   const [dropPreview, setDropPreview] = useState<DropPreview | null>(null)
+  const [placementPreview, setPlacementPreview] = useState<DropPreview | null>(null)
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => { if (event.code === 'Space') spaceDownRef.current = true }
@@ -176,6 +177,11 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     )
     if (item && !item.locked) setEditor({ id: item.id, x: item.x, y: item.y, value: item.text })
   }, [props.editTextRequest, props.scene.elements])
+
+  useEffect(() => {
+    if (props.placementMode === 'text' || props.placementMode === 'rectangle' || props.placementMode === 'circle' || props.placementMode === 'triangle' || props.placementMode === 'cross') return
+    setPlacementPreview(null)
+  }, [props.placementMode])
 
   const beginElementDrag = (event: ReactPointerEvent<HTMLButtonElement>, element: CanvasElement) => {
     if (event.button !== 0) return
@@ -347,6 +353,28 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     }
   }
 
+  const updatePlacementPreview = (point: CanvasPoint) => {
+    const mode = props.placementMode
+    if (mode === 'text') {
+      setPlacementPreview({ kind: 'text', x: point.x - 70, y: point.y - 20, width: 140, height: 40, label: '文字' })
+      return
+    }
+    if (mode === 'rectangle' || mode === 'circle' || mode === 'triangle' || mode === 'cross') {
+      const dimensions = getSymbolBaseDimensions(mode)
+      setPlacementPreview({
+        kind: 'symbol',
+        symbolType: mode,
+        x: point.x - dimensions.width / 2,
+        y: point.y - dimensions.height / 2,
+        width: dimensions.width,
+        height: dimensions.height,
+        label: SYMBOL_LABELS[mode],
+      })
+      return
+    }
+    setPlacementPreview(null)
+  }
+
   const beginCanvasPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button === 1 || (event.button === 0 && spaceDownRef.current)) {
       event.preventDefault()
@@ -397,8 +425,11 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       return
     }
     const state = marqueeRef.current
-    if (!state) return
     const point = canvasPoint(event)
+    if (!state) {
+      updatePlacementPreview(point)
+      return
+    }
     const next = {
       ...state,
       currentX: point.x,
@@ -537,6 +568,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       onPointerMove={moveCanvasPointer}
       onPointerUp={finishCanvasPointer}
       onPointerCancel={finishCanvasPointer}
+      onPointerLeave={() => setPlacementPreview(null)}
       onDragEnter={updateDropPreview}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('application/x-mahjong-tile') || event.dataTransfer.types.includes('application/x-mahjong-symbol') || event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('text/plain')) {
@@ -762,26 +794,30 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
 
       {marquee?.visible && <div className="selection-marquee export-hidden" style={marqueeStyle} />}
 
-      {dropPreview && <div
-        className={`drop-placement-preview drop-preview-${dropPreview.kind} export-hidden`}
+      {(dropPreview ?? placementPreview) && (() => {
+        const preview = dropPreview ?? placementPreview
+        if (!preview) return null
+        return <div
+        className={`drop-placement-preview drop-preview-${preview.kind} export-hidden`}
         style={{
-          left: dropPreview.x + camera.x,
-          top: dropPreview.y + camera.y,
-          width: dropPreview.width,
-          height: dropPreview.height,
+          left: preview.x + camera.x,
+          top: preview.y + camera.y,
+          width: preview.width,
+          height: preview.height,
         }}
         aria-hidden="true"
       >
-        {dropPreview.kind === 'symbol' && dropPreview.symbolType === 'triangle' ? (
+        {preview.kind === 'symbol' && preview.symbolType === 'triangle' ? (
           <svg className="drop-symbol-preview drop-symbol-triangle" viewBox="0 0 99 66" aria-hidden="true">
             <polygon points="49.5,5 94,61 5,61" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
           </svg>
-        ) : dropPreview.kind === 'symbol' && dropPreview.symbolType ? (
-          <span className={`drop-symbol-preview drop-symbol-${dropPreview.symbolType}`} aria-hidden="true">
-            {dropPreview.symbolType === 'cross' ? '✕' : ''}
+        ) : preview.kind === 'symbol' && preview.symbolType ? (
+          <span className={`drop-symbol-preview drop-symbol-${preview.symbolType}`} aria-hidden="true">
+            {preview.symbolType === 'cross' ? '✕' : ''}
           </span>
-        ) : <span>{dropPreview.label}</span>}
-      </div>}
+        ) : <span>{preview.label}</span>}
+      </div>
+      })()}
 
       {drawing && (
         <svg
