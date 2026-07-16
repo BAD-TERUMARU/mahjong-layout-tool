@@ -51,7 +51,7 @@
 .toolbar {
   display: block;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(251, 250, 244, .96);
   border-bottom: 1px solid var(--line);
   box-shadow: 0 5px 20px rgba(28, 55, 47, .08);
@@ -115,6 +115,18 @@
 .text-color-swatches button.active { outline: 2px solid #23826a; outline-offset: 1px; }
 .text-color-swatches .custom { border-radius: 50%; }
 .text-color-swatches .add-custom-color { color: #31574d; background: #fff; font: 800 14px/1 sans-serif; }
+.custom-color-picker-anchor { position: relative; }
+.text-color-swatches .custom-color-detail { width: 24px; min-width: 24px; color: #31574d; background: linear-gradient(135deg, #fff4ad, #9de2d1 48%, #88b8f5); font: 800 9px/1 sans-serif; }
+.custom-color-picker { position: absolute; z-index: 80; top: 23px; left: 0; width: 210px; padding: 9px; border: 1px solid #aac5ba; border-radius: 7px; background: #fff; box-shadow: 0 9px 24px rgba(19, 54, 45, .22); }
+.custom-color-picker-header { display: flex; align-items: center; justify-content: space-between; color: #31574d; font-size: 11px; }
+.custom-color-picker-header button { width: 20px; min-width: 20px; height: 20px; min-height: 20px; color: #607a72; background: transparent; border: 0; font-size: 17px; }
+.custom-color-picker-controls { display: grid; grid-template-columns: 54px 1fr; gap: 8px; align-items: end; margin-top: 8px; }
+.custom-color-preview { display: grid; place-items: center; height: 44px; overflow: hidden; border: 1px solid #adc5bb; border-radius: 5px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.55); font-size: 9px; font-weight: 800; }
+.custom-color-preview input { position: absolute; width: 54px; height: 44px; opacity: 0; cursor: pointer; }
+.custom-color-code { display: grid; gap: 3px; color: #607a72; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.custom-color-code input { width: 100%; height: 27px; border: 1px solid #cbd7d0; border-radius: 4px; padding: 0 6px; color: #31574d; font: 12px ui-monospace, monospace; }
+.text-color-swatches .custom-color-apply { width: 100%; height: 28px; margin-top: 8px; border-color: #23826a; border-radius: 4px; color: #fff; background: #23826a; font: 800 11px sans-serif; }
+.text-color-swatches .custom-color-apply:disabled { opacity: .45; cursor: not-allowed; }
 
 .text-tool input {
   width: 130px;
