@@ -110,6 +110,7 @@ interface PanState {
 
 interface DropPreview {
   kind: 'tile' | 'symbol' | 'text' | 'image'
+  symbolType?: SymbolType
   x: number
   y: number
   width: number
@@ -502,6 +503,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
         width: dimensions.width,
         height: dimensions.height,
         label: SYMBOL_LABELS[symbolType],
+        symbolType,
       })
       return
     }
@@ -769,7 +771,17 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           height: dropPreview.height,
         }}
         aria-hidden="true"
-      ><span>{dropPreview.label}</span></div>}
+      >
+        {dropPreview.kind === 'symbol' && dropPreview.symbolType === 'triangle' ? (
+          <svg className="drop-symbol-preview drop-symbol-triangle" viewBox="0 0 99 66" aria-hidden="true">
+            <polygon points="49.5,5 94,61 5,61" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+          </svg>
+        ) : dropPreview.kind === 'symbol' && dropPreview.symbolType ? (
+          <span className={`drop-symbol-preview drop-symbol-${dropPreview.symbolType}`} aria-hidden="true">
+            {dropPreview.symbolType === 'cross' ? '✕' : ''}
+          </span>
+        ) : <span>{dropPreview.label}</span>}
+      </div>}
 
       {drawing && (
         <svg
