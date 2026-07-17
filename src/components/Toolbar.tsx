@@ -11,6 +11,7 @@ interface ToolbarProps {
   textStyle: { fontFamily: string; fontSize: number; color: string }
   isEditingSelectedText: boolean
   selectedShapeColor: string | null
+  shapeColor: string
   canDuplicate: boolean
   canToggleTileFaces: boolean
   canEditProperties: boolean
@@ -204,9 +205,17 @@ export const Toolbar = (props: ToolbarProps) => {
               </div>
             </div>
             <div className="text-color-palette" aria-label="文字色パレット">
+              <small>文字</small>
               <div className="text-color-swatches">
-                {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={activeColor.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の色`} onClick={() => updateColor(color)} />)}
-                {customColors.map((color) => <button key={color} type="button" className={`custom${activeColor.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の色`} onClick={() => updateColor(color)} />)}
+                {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={props.textStyle.color.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の文字色`} onClick={() => props.onUpdateTextStyle({ color })} />)}
+                {customColors.map((color) => <button key={color} type="button" className={`custom${props.textStyle.color.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の文字色`} onClick={() => props.onUpdateTextStyle({ color })} />)}
+              </div>
+            </div>
+            <div className="shape-color-palette" aria-label="図形色パレット">
+              <small>図形</small>
+              <div className="text-color-swatches">
+                {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={props.shapeColor.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の図形色`} onClick={() => props.onUpdateSelectedShapeColor(color)} />)}
+                {customColors.map((color) => <button key={color} type="button" className={`custom${props.shapeColor.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の図形色`} onClick={() => props.onUpdateSelectedShapeColor(color)} />)}
               </div>
             </div>
           </div>
@@ -218,7 +227,9 @@ export const Toolbar = (props: ToolbarProps) => {
             <ToolButton label="選択" icon="↖" onClick={() => props.onSetPlacementMode('select')} active={props.placementMode === 'select'} />
             <ToolButton label="クリック文字" icon="T" onClick={() => props.onSetPlacementMode('text')} active={props.placementMode === 'text'} />
             <ToolButton label="線を描く" icon="✎" onClick={() => props.onSetPlacementMode('draw')} active={props.placementMode === 'draw'} />
-            <ToolButton label="直線" icon="╱" onClick={() => props.onSetPlacementMode('line')} active={props.placementMode === 'line'} />
+          <ToolButton label="直線" icon="╱" onClick={() => props.onSetPlacementMode('line')} active={props.placementMode === 'line'} />
+          <ToolButton label="曲線" icon="⌒" onClick={() => props.onSetPlacementMode('curve')} active={props.placementMode === 'curve'} />
+          <ToolButton label="矢印" icon="→" onClick={() => props.onSetPlacementMode('arrow')} active={props.placementMode === 'arrow'} />
             <ToolButton label="長方形" icon="▭" onClick={() => props.onSetPlacementMode('rectangle')} active={props.placementMode === 'rectangle'} />
             <ToolButton label="三角形" icon="△" onClick={() => props.onSetPlacementMode('triangle')} active={props.placementMode === 'triangle'} />
             <ToolButton label="バツ" icon="✕" onClick={() => props.onSetPlacementMode('cross')} active={props.placementMode === 'cross'} />

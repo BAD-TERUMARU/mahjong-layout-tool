@@ -3,6 +3,7 @@ import type {
   CanvasElement,
   CanvasPoint,
   DrawingElement,
+  DrawingType,
   ImageElement,
   Rotation,
   Scene,
@@ -15,7 +16,7 @@ import type {
 export const GRID_SIZE = 16
 export const TILE_WIDTH = 48
 export const TILE_HEIGHT = 66
-export const TILE_GAP = 2
+export const TILE_GAP = 0
 export const DEFAULT_WORKSPACE_WIDTH = 900
 export const DEFAULT_WORKSPACE_HEIGHT = 560
 export const MIN_WORKSPACE_WIDTH = 520
@@ -127,6 +128,7 @@ export const makeDrawing = (
   width: number,
   height: number,
   zIndex: number,
+  drawingType: DrawingType = 'freehand',
 ): DrawingElement => ({
   ...makeBase('drawing', x, y, zIndex),
   kind: 'drawing',
@@ -135,6 +137,7 @@ export const makeDrawing = (
   height,
   color: '#244a40',
   strokeWidth: 4,
+  drawingType,
 })
 
 export const makeImage = (

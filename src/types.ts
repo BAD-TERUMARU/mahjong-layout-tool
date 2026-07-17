@@ -4,7 +4,9 @@ export type Rotation = 0 | 90 | 180 | 270
 
 export type SymbolType = 'rectangle' | 'cross' | 'circle' | 'triangle'
 
-export type PlacementMode = 'select' | 'text' | 'draw' | 'line' | SymbolType
+export type DrawingType = 'freehand' | 'line' | 'curve' | 'arrow'
+
+export type PlacementMode = 'select' | 'text' | 'draw' | 'line' | 'curve' | 'arrow' | SymbolType
 
 export interface CanvasPoint {
   x: number
@@ -67,6 +69,7 @@ export interface DrawingElement extends CanvasElementBase {
   height: number
   color: string
   strokeWidth: number
+  drawingType?: DrawingType
 }
 
 export interface ImageElement extends CanvasElementBase {

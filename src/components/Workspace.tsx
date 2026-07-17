@@ -17,6 +17,7 @@ import type {
   Scene,
   SymbolType,
   TextElement,
+  DrawingType,
 } from '../types'
 import {
   getElementDimensions,
@@ -49,7 +50,7 @@ interface WorkspaceProps {
   onDeleteDragged: (ids: string[]) => void
   onTrashHover: (active: boolean) => void
   onPlaceSymbol: (symbolType: SymbolType, x: number, y: number) => void
-  onCommitDrawing: (points: CanvasPoint[]) => void
+  onCommitDrawing: (points: CanvasPoint[], drawingType?: DrawingType) => void
   onCommitText: (text: string, x: number, y: number, id?: string) => void
   onFinishTextEditing: () => void
   onToggleTileFace: (id: string) => void
@@ -141,6 +142,24 @@ const intersectionIds = (
     && element.y < bottom
     && element.y + dimensions.height > top
 }).map((element) => element.id)
+
+const curvePath = (points: CanvasPoint[]) => {
+  const start = points[0]
+  const end = points.at(-1) ?? start
+  const controlX = (start.x + end.x) / 2
+  const controlY = Math.min(start.y, end.y) - Math.max(30, Math.abs(end.x - start.x) * .25)
+  return `M ${start.x} ${start.y} Q ${controlX} ${controlY} ${end.x} ${end.y}`
+}
+
+const arrowHeadPoints = (points: CanvasPoint[]) => {
+  const start = points[0]
+  const end = points.at(-1) ?? start
+  const angle = Math.atan2(end.y - start.y, end.x - start.x)
+  const size = 11
+  const a = { x: end.x - size * Math.cos(angle - Math.PI / 6), y: end.y - size * Math.sin(angle - Math.PI / 6) }
+  const b = { x: end.x - size * Math.cos(angle + Math.PI / 6), y: end.y - size * Math.sin(angle + Math.PI / 6) }
+  return `${a.x},${a.y} ${end.x},${end.y} ${b.x},${b.y}`
+}
 
 export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref) => {
   const propsRef = useRef(props)
@@ -383,7 +402,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       return
     }
     if (event.button !== 0) return
-    if (props.placementMode === 'draw' || props.placementMode === 'line') {
+    if (props.placementMode === 'draw' || props.placementMode === 'line' || props.placementMode === 'curve' || props.placementMode === 'arrow') {
       const point = canvasPoint(event)
       const state = { pointerId: event.pointerId, points: [point] }
       drawingRef.current = state
@@ -418,7 +437,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       const point = canvasPoint(event)
       const previous = activeDrawing.points.at(-1)
       if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 2) {
-        const next = { ...activeDrawing, points: props.placementMode === 'line' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point] }
+        const next = { ...activeDrawing, points: props.placementMode === 'line' || props.placementMode === 'curve' || props.placementMode === 'arrow' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point] }
         drawingRef.current = next
         setDrawing(next)
       }
@@ -449,14 +468,14 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     const activeDrawing = drawingRef.current
     if (activeDrawing?.pointerId === event.pointerId) {
       const point = canvasPoint(event)
-      const points = props.placementMode === 'line' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point]
+      const points = props.placementMode === 'line' || props.placementMode === 'curve' || props.placementMode === 'arrow' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point]
       drawingRef.current = null
       setDrawing(null)
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId)
       }
       if (points.length >= 2 && Math.hypot(points.at(-1)!.x - points[0].x, points.at(-1)!.y - points[0].y) > 3) {
-        props.onCommitDrawing(points)
+        props.onCommitDrawing(points, props.placementMode === 'line' ? 'line' : props.placementMode === 'curve' ? 'curve' : props.placementMode === 'arrow' ? 'arrow' : 'freehand')
       }
       return
     }
@@ -479,7 +498,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
 
     if (props.placementMode === 'text') {
       setEditor({ x: state.startX, y: state.startY, value: '' })
-    } else if (props.placementMode !== 'select' && props.placementMode !== 'draw' && props.placementMode !== 'line') {
+    } else if (props.placementMode !== 'select' && props.placementMode !== 'draw' && props.placementMode !== 'line' && props.placementMode !== 'curve' && props.placementMode !== 'arrow') {
       props.onPlaceSymbol(props.placementMode, state.startX, state.startY)
     } else {
       props.onClearSelection()
@@ -562,7 +581,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   return (
     <div
       ref={ref}
-      className={`workspace-canvas${props.showGrid ? ' show-grid' : ''}${props.placementMode === 'draw' || props.placementMode === 'line' ? ' drawing-mode' : ''}`}
+      className={`workspace-canvas${props.showGrid ? ' show-grid' : ''}${props.placementMode === 'draw' || props.placementMode === 'line' || props.placementMode === 'curve' || props.placementMode === 'arrow' ? ' drawing-mode' : ''}`}
       style={{ width: props.scene.width, height: props.scene.height }}
       onPointerDown={beginCanvasPointer}
       onPointerMove={moveCanvasPointer}
@@ -718,14 +737,10 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
                 style={{ width: element.width, height: element.height, transform: `translate(-50%, -50%) rotate(${element.rotation}deg)` }}
                 aria-hidden="true"
               >
-                <polyline
-                  points={element.points.map((point) => `${point.x},${point.y}`).join(' ')}
-                  fill="none"
-                  stroke={element.color}
-                  strokeWidth={element.strokeWidth}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                {element.drawingType === 'curve' ? <path d={curvePath(element.points)} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" /> : <>
+                  <polyline points={element.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+                  {element.drawingType === 'arrow' && <polyline points={arrowHeadPoints(element.points)} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />}
+                </>}
               </svg>
               {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
             </button>
@@ -833,7 +848,10 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           }}
           aria-hidden="true"
         >
-          <polyline points={drawing.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          {props.placementMode === 'curve' ? <path d={curvePath(drawing.points)} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" /> : <>
+            <polyline points={drawing.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            {props.placementMode === 'arrow' && <polyline points={arrowHeadPoints(drawing.points)} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />}
+          </>}
         </svg>
       )}
 

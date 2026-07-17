@@ -14,6 +14,7 @@ import type {
   CanvasPoint,
   ContextMenuState,
   DrawingElement,
+  DrawingType,
   ElementPosition,
   ImageElement,
   NamedSavedLayout,
@@ -63,6 +64,9 @@ const isRotation = (value: unknown): value is Rotation =>
 
 const isSymbolType = (value: unknown): value is SymbolType =>
   value === 'rectangle' || value === 'cross' || value === 'circle' || value === 'triangle'
+
+const isDrawingType = (value: unknown): value is DrawingType =>
+  value === 'freehand' || value === 'line' || value === 'curve' || value === 'arrow'
 
 const normalizeTextColor = (value: unknown) => {
   if (typeof value !== 'string') return '#172c27'
@@ -134,6 +138,7 @@ const parseElement = (value: unknown): CanvasElement | null => {
       height: clamp(typeof item.height === 'number' ? item.height : 20, 8, MAX_WORKSPACE_HEIGHT),
       color: typeof item.color === 'string' ? item.color : '#244a40',
       strokeWidth: clamp(typeof item.strokeWidth === 'number' ? item.strokeWidth : 4, 1, 20),
+      drawingType: isDrawingType(item.drawingType) ? item.drawingType : 'freehand',
     }
   }
   if (item.kind === 'image' && typeof item.src === 'string') {
@@ -276,6 +281,7 @@ const App = () => {
   const [showGrid, setShowGrid] = useState(initialLayout?.settings.showGrid ?? true)
   const [snapToGrid, setSnapToGrid] = useState(initialLayout?.settings.snapToGrid ?? false)
   const [defaultTextStyle, setDefaultTextStyle] = useState({ fontFamily: 'serif', fontSize: 22, color: '#172c27' })
+  const [defaultShapeColor, setDefaultShapeColor] = useState('#244a40')
   const [placementMode, setPlacementMode] = useState<PlacementMode>('select')
   const [editTextRequest, setEditTextRequest] = useState<{ id: string; token: number } | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -546,27 +552,28 @@ const App = () => {
 
   const placeSymbol = (symbolType: SymbolType, x: number, y: number) => {
     // 新規文字と同じ既定色を、これから追加する図形にも使用する。
-    const item = { ...makeSymbol(symbolType, x, y, nextZIndex()), color: defaultTextStyle.color }
+    const item = { ...makeSymbol(symbolType, x, y, nextZIndex()), color: defaultShapeColor }
     const dimensions = getElementDimensions(item)
     item.x = snap(x - dimensions.width / 2, snapToGrid)
     item.y = snap(y - dimensions.height / 2, snapToGrid)
     history.commit({ ...scene, elements: [...scene.elements, item] })
   }
 
-  const commitDrawing = (points: CanvasPoint[]) => {
+  const commitDrawing = (points: CanvasPoint[], drawingType: DrawingType = 'freehand') => {
     if (points.length < 2) return
     const minX = Math.min(...points.map((point) => point.x))
-    const minY = Math.min(...points.map((point) => point.y))
     const maxX = Math.max(...points.map((point) => point.x))
+    const curveLift = drawingType === 'curve' ? Math.max(30, Math.abs(maxX - minX) * 0.25) : 0
+    const minY = Math.min(...points.map((point) => point.y)) - curveLift
     const maxY = Math.max(...points.map((point) => point.y))
-    const padding = 8
+    const padding = 20
     const x = Math.floor(minX - padding)
     const y = Math.floor(minY - padding)
     const width = Math.max(16, Math.ceil(maxX - x + padding))
     const height = Math.max(16, Math.ceil(maxY - y + padding))
     const relative = points.map((point) => ({ x: point.x - x, y: point.y - y }))
-    const item = makeDrawing(relative, x, y, width, height, nextZIndex())
-    history.commit({ ...scene, elements: [...scene.elements, { ...item, color: defaultTextStyle.color }] })
+    const item = makeDrawing(relative, x, y, width, height, nextZIndex(), drawingType)
+    history.commit({ ...scene, elements: [...scene.elements, { ...item, color: defaultShapeColor }] })
   }
 
   const addImageFile = async (file: File, anchor?: { x: number; y: number } | null) => {
@@ -994,6 +1001,7 @@ const App = () => {
         textStyle={selectedText ? { fontFamily: selectedText.fontFamily, fontSize: selectedText.fontSize, color: selectedText.color } : defaultTextStyle}
         isEditingSelectedText={Boolean(selectedText)}
         selectedShapeColor={selectedColoredElement?.color ?? null}
+        shapeColor={selectedColoredElement?.color ?? defaultShapeColor}
         canDuplicate={selected.length > 0}
         canToggleTileFaces={selected.some((element) => element.kind === 'tile' && !element.locked)}
         canEditProperties={Boolean(selectedEditable)}
@@ -1027,7 +1035,7 @@ const App = () => {
             color: style.color ?? current.color,
           }))
         }}
-        onUpdateSelectedShapeColor={(color) => selectedColoredElement && updateElementColor(selectedColoredElement.id, color)}
+        onUpdateSelectedShapeColor={(color) => selectedColoredElement ? updateElementColor(selectedColoredElement.id, color) : setDefaultShapeColor(color)}
         onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}
