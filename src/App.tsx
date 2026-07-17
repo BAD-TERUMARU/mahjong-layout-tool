@@ -282,6 +282,7 @@ const App = () => {
   const [snapToGrid, setSnapToGrid] = useState(initialLayout?.settings.snapToGrid ?? false)
   const [defaultTextStyle, setDefaultTextStyle] = useState({ fontFamily: 'serif', fontSize: 22, color: '#172c27' })
   const [defaultShapeColor, setDefaultShapeColor] = useState('#244a40')
+  const [defaultShapeStrokeWidth, setDefaultShapeStrokeWidth] = useState(4)
   const [placementMode, setPlacementMode] = useState<PlacementMode>('select')
   const [editTextRequest, setEditTextRequest] = useState<{ id: string; token: number } | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -552,7 +553,7 @@ const App = () => {
 
   const placeSymbol = (symbolType: SymbolType, x: number, y: number) => {
     // 新規文字と同じ既定色を、これから追加する図形にも使用する。
-    const item = { ...makeSymbol(symbolType, x, y, nextZIndex()), color: defaultShapeColor }
+    const item = { ...makeSymbol(symbolType, x, y, nextZIndex()), color: defaultShapeColor, strokeWidth: defaultShapeStrokeWidth }
     const dimensions = getElementDimensions(item)
     item.x = snap(x - dimensions.width / 2, snapToGrid)
     item.y = snap(y - dimensions.height / 2, snapToGrid)
@@ -573,7 +574,7 @@ const App = () => {
     const height = Math.max(16, Math.ceil(maxY - y + padding))
     const relative = points.map((point) => ({ x: point.x - x, y: point.y - y }))
     const item = makeDrawing(relative, x, y, width, height, nextZIndex(), drawingType)
-    history.commit({ ...scene, elements: [...scene.elements, { ...item, color: defaultShapeColor }] })
+    history.commit({ ...scene, elements: [...scene.elements, { ...item, color: defaultShapeColor, strokeWidth: defaultShapeStrokeWidth }] })
   }
 
   const addImageFile = async (file: File, anchor?: { x: number; y: number } | null) => {
@@ -755,6 +756,15 @@ const App = () => {
         if (element.kind !== 'text' && element.kind !== 'symbol' && element.kind !== 'drawing') return element
         return { ...element, color }
       }),
+    })
+  }
+
+  const updateElementStrokeWidth = (id: string, strokeWidth: number) => {
+    history.commit({
+      ...scene,
+      elements: scene.elements.map((element) => element.id === id && (element.kind === 'symbol' || element.kind === 'drawing') && !element.locked
+        ? { ...element, strokeWidth: clamp(strokeWidth, 1, element.kind === 'symbol' ? 12 : 20) }
+        : element),
     })
   }
 
@@ -1002,6 +1012,7 @@ const App = () => {
         isEditingSelectedText={Boolean(selectedText)}
         selectedShapeColor={selectedColoredElement?.color ?? null}
         shapeColor={selectedColoredElement?.color ?? defaultShapeColor}
+        shapeStrokeWidth={selectedColoredElement?.strokeWidth ?? defaultShapeStrokeWidth}
         canDuplicate={selected.length > 0}
         canToggleTileFaces={selected.some((element) => element.kind === 'tile' && !element.locked)}
         canEditProperties={Boolean(selectedEditable)}
@@ -1036,6 +1047,7 @@ const App = () => {
           }))
         }}
         onUpdateSelectedShapeColor={(color) => selectedColoredElement ? updateElementColor(selectedColoredElement.id, color) : setDefaultShapeColor(color)}
+        onUpdateShapeStrokeWidth={(strokeWidth) => selectedColoredElement ? updateElementStrokeWidth(selectedColoredElement.id, strokeWidth) : setDefaultShapeStrokeWidth(clamp(strokeWidth, 1, 20))}
         onEditProperties={() => selectedEditable && setPropertyElementId(selectedEditable.id)}
         onRandomHand={generateHand}
         onShuffle={shuffleTiles}
@@ -1129,6 +1141,9 @@ const App = () => {
           onAddCircle={() => placeSymbol('circle', contextMenu.canvasX, contextMenu.canvasY)}
           onAddCross={() => placeSymbol('cross', contextMenu.canvasX, contextMenu.canvasY)}
           onDrawMode={() => setPlacementMode('draw')}
+          onLineMode={() => setPlacementMode('line')}
+          onCurveMode={() => setPlacementMode('curve')}
+          onArrowMode={() => setPlacementMode('arrow')}
           onAddImage={() => requestImage({ x: contextMenu.canvasX, y: contextMenu.canvasY })}
           onSelectMode={() => setPlacementMode('select')}
           onTextMode={() => setPlacementMode('text')}

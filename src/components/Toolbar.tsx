@@ -12,6 +12,7 @@ interface ToolbarProps {
   isEditingSelectedText: boolean
   selectedShapeColor: string | null
   shapeColor: string
+  shapeStrokeWidth: number
   canDuplicate: boolean
   canToggleTileFaces: boolean
   canEditProperties: boolean
@@ -29,6 +30,7 @@ interface ToolbarProps {
   onEditSelectedText: () => void
   onUpdateTextStyle: (style: { fontFamily?: string; fontSize?: number; color?: string }) => void
   onUpdateSelectedShapeColor: (color: string) => void
+  onUpdateShapeStrokeWidth: (strokeWidth: number) => void
   onEditProperties: () => void
   onRandomHand: (count: 13 | 14) => void
   onShuffle: () => void
@@ -211,8 +213,15 @@ export const Toolbar = (props: ToolbarProps) => {
                 {customColors.map((color) => <button key={color} type="button" className={`custom${props.textStyle.color.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の文字色`} onClick={() => props.onUpdateTextStyle({ color })} />)}
               </div>
             </div>
+          </div>
+          <div className="shape-style-ribbon" aria-label="図形のスタイル">
+            <span className="shape-style-label">図形・線</span>
+            <label className="shape-stroke-control">太さ
+              <input type="range" min="1" max="12" value={Math.min(12, props.shapeStrokeWidth)} onChange={(event) => props.onUpdateShapeStrokeWidth(Number(event.target.value))} aria-label="図形と線の太さ" />
+              <output>{props.shapeStrokeWidth}</output>
+            </label>
             <div className="shape-color-palette" aria-label="図形色パレット">
-              <small>図形</small>
+              <small>色</small>
               <div className="text-color-swatches">
                 {TEXT_COLOR_PALETTE.map((color) => <button key={color} type="button" className={props.shapeColor.toLowerCase() === color ? 'active' : ''} style={{ backgroundColor: color }} title={color} aria-label={`${color}の図形色`} onClick={() => props.onUpdateSelectedShapeColor(color)} />)}
                 {customColors.map((color) => <button key={color} type="button" className={`custom${props.shapeColor.toLowerCase() === color ? ' active' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={`${color}の図形色`} onClick={() => props.onUpdateSelectedShapeColor(color)} />)}

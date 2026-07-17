@@ -20,6 +20,9 @@ interface ContextMenuProps {
   onAddCircle: () => void
   onAddCross: () => void
   onDrawMode: () => void
+  onLineMode: () => void
+  onCurveMode: () => void
+  onArrowMode: () => void
   onAddImage: () => void
   onSelectMode: () => void
   onTextMode: () => void
@@ -97,6 +100,9 @@ export const ContextMenu = (props: ContextMenuProps) => {
       <MenuButton label="✕" onClick={() => run(props.onAddCross)} />
       <MenuButton label="クリック文字" onClick={() => run(props.onTextMode)} />
       <MenuButton label="線を描く" onClick={() => run(props.onDrawMode)} />
+      <MenuButton label="直線" onClick={() => run(props.onLineMode)} />
+      <MenuButton label="曲線" onClick={() => run(props.onCurveMode)} />
+      <MenuButton label="矢印" onClick={() => run(props.onArrowMode)} />
       <MenuButton label="画像を追加" onClick={() => run(props.onAddImage)} />
 
       {props.element && (

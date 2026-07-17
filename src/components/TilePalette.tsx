@@ -32,6 +32,8 @@ const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; h
   { mode: 'triangle', icon: '△', label: '三角形', hint: 'ドラッグして配置', dragOnly: true },
   { mode: 'cross', icon: '✕', label: 'バツ', hint: 'ドラッグして配置', dragOnly: true },
   { mode: 'line', icon: '╱', label: '直線', hint: 'ドラッグで描画' },
+  { mode: 'curve', icon: '⌒', label: '曲線', hint: 'ドラッグで描画' },
+  { mode: 'arrow', icon: '→', label: '矢印', hint: 'ドラッグで描画' },
   { mode: 'text', icon: 'T', label: 'クリック文字', hint: '自由入力' },
 ]
 
