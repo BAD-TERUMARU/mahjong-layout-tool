@@ -41,16 +41,16 @@ export const clamp = (value: number, min: number, max: number) =>
 export const snap = (value: number, enabled: boolean) =>
   enabled ? Math.round(value / GRID_SIZE) * GRID_SIZE : Math.round(value)
 
-/** The bend is determined by the drawing direction: left-to-right bows up,
- * while right-to-left bows down. This makes both arc directions available with
- * the same simple drag gesture. */
+/** The curve bends toward the side where the drag begins: a stroke starting
+ * above its end bows upward, while one starting below bows downward. */
 export const getCurveControlPoint = (points: CanvasPoint[]) => {
   const start = points[0]
   const end = points.at(-1) ?? start
-  const lift = Math.max(30, Math.abs(end.x - start.x) * 0.25)
+  const lift = Math.max(30, Math.hypot(end.x - start.x, end.y - start.y) * 0.25)
+  const startsAbove = start.y <= end.y
   return {
     x: (start.x + end.x) / 2,
-    y: end.x < start.x ? Math.max(start.y, end.y) + lift : Math.min(start.y, end.y) - lift,
+    y: startsAbove ? Math.min(start.y, end.y) - lift : Math.max(start.y, end.y) + lift,
   }
 }
 

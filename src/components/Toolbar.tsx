@@ -54,6 +54,7 @@ const ToolButton = ({
   disabled,
   active,
   danger,
+  onDoubleClick,
 }: {
   label: string
   icon: string
@@ -61,11 +62,13 @@ const ToolButton = ({
   disabled?: boolean
   active?: boolean
   danger?: boolean
+  onDoubleClick?: () => void
 }) => (
   <button
     type="button"
     className={`tool-button${active ? ' active' : ''}${danger ? ' danger' : ''}`}
     onClick={onClick}
+    onDoubleClick={onDoubleClick}
     disabled={disabled}
     aria-pressed={active}
   >
@@ -235,15 +238,19 @@ export const Toolbar = (props: ToolbarProps) => {
           <div className="tool-group placement-tools">
             <span className="tool-group-label">配置（Escで解除）</span>
             <ToolButton label="選択" icon="↖" onClick={() => props.onSetPlacementMode('select')} active={props.placementMode === 'select'} />
-            <ToolButton label="クリック文字" icon="T" onClick={() => props.onSetPlacementMode('text')} active={props.placementMode === 'text'} />
-            <ToolButton label="線を描く" icon="✎" onClick={() => props.onSetPlacementMode('draw')} active={props.placementMode === 'draw'} />
-          <ToolButton label="直線" icon="╱" onClick={() => props.onSetPlacementMode('line')} active={props.placementMode === 'line'} />
-          <ToolButton label="曲線" icon="⌒" onClick={() => props.onSetPlacementMode('curve')} active={props.placementMode === 'curve'} />
-          <ToolButton label="矢印" icon="→" onClick={() => props.onSetPlacementMode('arrow')} active={props.placementMode === 'arrow'} />
-            <ToolButton label="長方形" icon="▭" onClick={() => props.onSetPlacementMode('rectangle')} active={props.placementMode === 'rectangle'} />
-            <ToolButton label="三角形" icon="△" onClick={() => props.onSetPlacementMode('triangle')} active={props.placementMode === 'triangle'} />
-            <ToolButton label="バツ" icon="✕" onClick={() => props.onSetPlacementMode('cross')} active={props.placementMode === 'cross'} />
-            <ToolButton label="丸" icon="〇" onClick={() => props.onSetPlacementMode('circle')} active={props.placementMode === 'circle'} />
+            {([
+              ['text', 'クリック文字', 'T'], ['draw', '線を描く', '✎'], ['line', '直線', '╱'], ['curve', '曲線', '⌒'], ['arrow', '矢印', '→'],
+              ['rectangle', '長方形', '▭'], ['triangle', '三角形', '△'], ['cross', 'バツ', '✕'], ['circle', '丸', '〇'],
+            ] as Array<[PlacementMode, string, string]>).map(([mode, label, icon]) => (
+              <ToolButton
+                key={mode}
+                label={label}
+                icon={icon}
+                onClick={() => props.onSetPlacementMode(mode)}
+                onDoubleClick={() => props.placementMode === mode && props.onSetPlacementMode('select')}
+                active={props.placementMode === mode}
+              />
+            ))}
           </div>
           <div className="tool-group text-tool">
             <span className="tool-group-label">クイック文字</span>
