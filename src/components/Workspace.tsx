@@ -732,9 +732,16 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
                 style={{ width: element.width, height: element.height, transform: `translate(-50%, -50%) rotate(${element.rotation}deg)` }}
                 aria-hidden="true"
               >
-                {element.drawingType === 'curve' ? <path d={curvePath(element.points)} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" /> : <>
+                {element.drawingType === 'curve' ? <>
+                  {element.selected && <path d={curvePath(element.points)} fill="none" stroke="#277fbd" strokeWidth={element.strokeWidth + 4} strokeLinecap="round" opacity=".7" />}
+                  <path d={curvePath(element.points)} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" />
+                </> : <>
+                  {element.selected && <polyline points={element.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#277fbd" strokeWidth={element.strokeWidth + 4} strokeLinecap="round" strokeLinejoin="round" opacity=".7" />}
                   <polyline points={element.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-                  {element.drawingType === 'arrow' && <polyline points={arrowHeadPoints(element.points)} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />}
+                  {element.drawingType === 'arrow' && <>
+                    {element.selected && <polyline points={arrowHeadPoints(element.points)} fill="none" stroke="#277fbd" strokeWidth={element.strokeWidth + 4} strokeLinecap="round" strokeLinejoin="round" opacity=".7" />}
+                    <polyline points={arrowHeadPoints(element.points)} fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+                  </>}
                 </>}
               </svg>
               {element.locked && <span className="lock-badge" aria-hidden="true">🔒</span>}
