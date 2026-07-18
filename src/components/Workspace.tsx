@@ -804,8 +804,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
                 <polygon points="49.5,5 94,61 5,61" fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinejoin="round" />
               </svg>
             ) : element.symbolType === 'wave' ? (
-              <svg className="symbol-visual symbol-wave" viewBox="0 0 240 66" style={{ width: visualWidth, height: visualHeight, transform: visualTransform }} aria-hidden="true">
-                <path d="M 4 33 C 20 7, 44 7, 60 33 S 100 59, 116 33 S 156 7, 172 33 S 212 59, 236 33" fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" />
+              <svg className="symbol-visual symbol-wave" viewBox="0 0 240 16" style={{ width: visualWidth, height: visualHeight, transform: visualTransform }} aria-hidden="true">
+                <path d="M 0 8 q 6 -5 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0" fill="none" stroke={element.color} strokeWidth={Math.min(element.strokeWidth, 4)} strokeLinecap="round" />
               </svg>
             ) : (
               <span
@@ -862,7 +862,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
             <polygon points="49.5,5 94,61 5,61" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
           </svg>
         ) : preview.kind === 'symbol' && preview.symbolType === 'wave' ? (
-          <svg className="drop-symbol-preview drop-symbol-wave" viewBox="0 0 240 66" aria-hidden="true"><path d="M 4 33 C 20 7, 44 7, 60 33 S 100 59, 116 33 S 156 7, 172 33 S 212 59, 236 33" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>
+          <svg className="drop-symbol-preview drop-symbol-wave" viewBox="0 0 240 16" aria-hidden="true"><path d="M 0 8 q 6 -5 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
         ) : preview.kind === 'symbol' && preview.symbolType ? (
           <span className={`drop-symbol-preview drop-symbol-${preview.symbolType}`} aria-hidden="true">
             {preview.symbolType === 'cross' ? '✕' : ''}

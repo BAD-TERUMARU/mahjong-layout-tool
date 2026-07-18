@@ -116,7 +116,7 @@ export const getSymbolBaseDimensions = (symbolType: SymbolType) => {
   if (symbolType === 'circle' || symbolType === 'triangle') {
     return { width: TILE_WIDTH * 2 + TILE_GAP, height: TILE_HEIGHT }
   }
-  if (symbolType === 'wave') return { width: TILE_WIDTH * 5 + TILE_GAP * 4, height: TILE_HEIGHT }
+  if (symbolType === 'wave') return { width: TILE_WIDTH * 5 + TILE_GAP * 4, height: GRID_SIZE }
   return { width: TILE_WIDTH, height: TILE_HEIGHT }
 }
 

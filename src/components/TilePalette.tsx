@@ -41,7 +41,7 @@ const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; h
 const setSymbolDragPreview = (event: ReactDragEvent<HTMLButtonElement>, mode: PlacementMode) => {
   if (mode !== 'rectangle' && mode !== 'circle' && mode !== 'triangle' && mode !== 'cross' && mode !== 'wave') return
   const width = mode === 'wave' ? 240 : mode === 'rectangle' ? 148 : mode === 'cross' ? 48 : 98
-  const height = 66
+  const height = mode === 'wave' ? 16 : 66
   const preview = document.createElement('div')
   preview.style.position = 'fixed'
   preview.style.left = '-10000px'
@@ -65,7 +65,7 @@ const setSymbolDragPreview = (event: ReactDragEvent<HTMLButtonElement>, mode: Pl
     preview.style.font = '700 49px/1 "Yu Gothic", sans-serif'
     preview.textContent = '✕'
   } else if (mode === 'wave') {
-    preview.innerHTML = '<svg viewBox="0 0 240 66" width="240" height="66" aria-hidden="true"><path d="M 4 33 C 20 7, 44 7, 60 33 S 100 59, 116 33 S 156 7, 172 33 S 212 59, 236 33" fill="none" stroke="#244a40" stroke-width="4" stroke-linecap="round" /></svg>'
+    preview.innerHTML = '<svg viewBox="0 0 240 16" width="240" height="16" aria-hidden="true"><path d="M 0 8 q 6 -5 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0 t 12 0" fill="none" stroke="#244a40" stroke-width="2" stroke-linecap="round" /></svg>'
   } else {
     preview.innerHTML = '<svg viewBox="0 0 99 66" width="98" height="66" aria-hidden="true"><polygon points="49.5,5 94,61 5,61" fill="none" stroke="#244a40" stroke-width="4" stroke-linejoin="round" /></svg>'
   }
