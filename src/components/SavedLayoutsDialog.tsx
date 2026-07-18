@@ -1,24 +1,17 @@
 import { useEffect, useState, type DragEvent, type MouseEvent } from 'react'
 import { TILE_MAP } from '../data/tiles'
 import type { NamedSavedLayout } from '../types'
-import { getElementDimensions } from '../utils/layout'
+import { getArrowHeadPoints, getCurveControlPoint, getElementDimensions } from '../utils/layout'
 
 const curvePath = (points: { x: number; y: number }[]) => {
   const start = points[0]
   const end = points.at(-1) ?? start
-  const controlX = (start.x + end.x) / 2
-  const controlY = Math.min(start.y, end.y) - Math.max(30, Math.abs(end.x - start.x) * 0.25)
-  return `M ${start.x} ${start.y} Q ${controlX} ${controlY} ${end.x} ${end.y}`
+  const control = getCurveControlPoint(points)
+  return `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`
 }
 
 const arrowHeadPoints = (points: { x: number; y: number }[]) => {
-  const start = points[0]
-  const end = points.at(-1) ?? start
-  const angle = Math.atan2(end.y - start.y, end.x - start.x)
-  const size = 14
-  const left = { x: end.x - Math.cos(angle - Math.PI / 6) * size, y: end.y - Math.sin(angle - Math.PI / 6) * size }
-  const right = { x: end.x - Math.cos(angle + Math.PI / 6) * size, y: end.y - Math.sin(angle + Math.PI / 6) * size }
-  return `${left.x},${left.y} ${end.x},${end.y} ${right.x},${right.y}`
+  return getArrowHeadPoints(points).map((point) => `${point.x},${point.y}`).join(' ')
 }
 
 interface SavedLayoutsDialogProps {

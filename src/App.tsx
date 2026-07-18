@@ -40,6 +40,7 @@ import {
   clamp,
   createId,
   getElementDimensions,
+  getDrawingVisualBounds,
   getSceneContentBounds,
   makeSymbol,
   makeDrawing,
@@ -131,15 +132,22 @@ const parseElement = (value: unknown): CanvasElement | null => {
         : []
     })
     if (points.length < 2) return null
+    const strokeWidth = clamp(typeof item.strokeWidth === 'number' ? item.strokeWidth : 4, 1, 20)
+    const drawingType = isDrawingType(item.drawingType) ? item.drawingType : 'freehand'
+    const visualBounds = getDrawingVisualBounds(points, drawingType, strokeWidth)
+    const x = Math.floor(base.x + visualBounds.minX)
+    const y = Math.floor(base.y + visualBounds.minY)
     return {
       ...base,
+      x,
+      y,
       kind: 'drawing',
-      points,
-      width: clamp(typeof item.width === 'number' ? item.width : 20, 8, MAX_WORKSPACE_WIDTH),
-      height: clamp(typeof item.height === 'number' ? item.height : 20, 8, MAX_WORKSPACE_HEIGHT),
+      points: points.map((point) => ({ x: point.x - visualBounds.minX, y: point.y - visualBounds.minY })),
+      width: clamp(Math.max(8, Math.ceil(visualBounds.maxX - visualBounds.minX)), 8, MAX_WORKSPACE_WIDTH),
+      height: clamp(Math.max(8, Math.ceil(visualBounds.maxY - visualBounds.minY)), 8, MAX_WORKSPACE_HEIGHT),
       color: typeof item.color === 'string' ? item.color : '#244a40',
-      strokeWidth: clamp(typeof item.strokeWidth === 'number' ? item.strokeWidth : 4, 1, 20),
-      drawingType: isDrawingType(item.drawingType) ? item.drawingType : 'freehand',
+      strokeWidth,
+      drawingType,
     }
   }
   if (item.kind === 'image' && typeof item.src === 'string') {
@@ -609,16 +617,11 @@ const App = () => {
 
   const commitDrawing = (points: CanvasPoint[], drawingType: DrawingType = 'freehand') => {
     if (points.length < 2) return
-    const minX = Math.min(...points.map((point) => point.x))
-    const maxX = Math.max(...points.map((point) => point.x))
-    const curveLift = drawingType === 'curve' ? Math.max(30, Math.abs(maxX - minX) * 0.25) : 0
-    const minY = Math.min(...points.map((point) => point.y)) - curveLift
-    const maxY = Math.max(...points.map((point) => point.y))
-    const padding = 20
-    const x = Math.floor(minX - padding)
-    const y = Math.floor(minY - padding)
-    const width = Math.max(16, Math.ceil(maxX - x + padding))
-    const height = Math.max(16, Math.ceil(maxY - y + padding))
+    const bounds = getDrawingVisualBounds(points, drawingType, defaultShapeStrokeWidth)
+    const x = Math.floor(bounds.minX)
+    const y = Math.floor(bounds.minY)
+    const width = Math.max(8, Math.ceil(bounds.maxX - x))
+    const height = Math.max(8, Math.ceil(bounds.maxY - y))
     const relative = points.map((point) => ({ x: point.x - x, y: point.y - y }))
     const item = makeDrawing(relative, x, y, width, height, nextZIndex(), drawingType)
     history.commit({ ...scene, elements: [...scene.elements, { ...item, color: defaultShapeColor, strokeWidth: defaultShapeStrokeWidth }] })

@@ -41,6 +41,61 @@ export const clamp = (value: number, min: number, max: number) =>
 export const snap = (value: number, enabled: boolean) =>
   enabled ? Math.round(value / GRID_SIZE) * GRID_SIZE : Math.round(value)
 
+/** The bend is determined by the drawing direction: left-to-right bows up,
+ * while right-to-left bows down. This makes both arc directions available with
+ * the same simple drag gesture. */
+export const getCurveControlPoint = (points: CanvasPoint[]) => {
+  const start = points[0]
+  const end = points.at(-1) ?? start
+  const lift = Math.max(30, Math.abs(end.x - start.x) * 0.25)
+  return {
+    x: (start.x + end.x) / 2,
+    y: end.x < start.x ? Math.max(start.y, end.y) + lift : Math.min(start.y, end.y) - lift,
+  }
+}
+
+export const getArrowHeadPoints = (points: CanvasPoint[], size = 11): CanvasPoint[] => {
+  const start = points[0]
+  const end = points.at(-1) ?? start
+  const angle = Math.atan2(end.y - start.y, end.x - start.x)
+  return [
+    { x: end.x - size * Math.cos(angle - Math.PI / 6), y: end.y - size * Math.sin(angle - Math.PI / 6) },
+    end,
+    { x: end.x - size * Math.cos(angle + Math.PI / 6), y: end.y - size * Math.sin(angle + Math.PI / 6) },
+  ]
+}
+
+const quadraticPoint = (start: CanvasPoint, control: CanvasPoint, end: CanvasPoint, t: number) => ({
+  x: (1 - t) ** 2 * start.x + 2 * (1 - t) * t * control.x + t ** 2 * end.x,
+  y: (1 - t) ** 2 * start.y + 2 * (1 - t) * t * control.y + t ** 2 * end.y,
+})
+
+/** Returns the visible SVG bounds, including stroke and arrow head, so the
+ * selectable element never has a large invisible rectangular hit area. */
+export const getDrawingVisualBounds = (points: CanvasPoint[], drawingType: DrawingType, strokeWidth: number) => {
+  let visiblePoints = [...points]
+  if (drawingType === 'curve') {
+    const start = points[0]
+    const end = points.at(-1) ?? start
+    const control = getCurveControlPoint(points)
+    visiblePoints = [start, end]
+    ;(['x', 'y'] as const).forEach((axis) => {
+      const denominator = start[axis] - 2 * control[axis] + end[axis]
+      const t = denominator === 0 ? -1 : (start[axis] - control[axis]) / denominator
+      if (t > 0 && t < 1) visiblePoints.push(quadraticPoint(start, control, end, t))
+    })
+  } else if (drawingType === 'arrow') {
+    visiblePoints = [...visiblePoints, ...getArrowHeadPoints(points)]
+  }
+  const strokeInset = Math.max(1, strokeWidth / 2 + 1)
+  return {
+    minX: Math.min(...visiblePoints.map((point) => point.x)) - strokeInset,
+    maxX: Math.max(...visiblePoints.map((point) => point.x)) + strokeInset,
+    minY: Math.min(...visiblePoints.map((point) => point.y)) - strokeInset,
+    maxY: Math.max(...visiblePoints.map((point) => point.y)) + strokeInset,
+  }
+}
+
 const rotateDimensions = (width: number, height: number, rotation: Rotation) =>
   rotation === 90 || rotation === 270 ? { width: height, height: width } : { width, height }
 

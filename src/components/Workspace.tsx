@@ -21,6 +21,8 @@ import type {
 } from '../types'
 import {
   getElementDimensions,
+  getArrowHeadPoints,
+  getCurveControlPoint,
   getSymbolBaseDimensions,
   snap,
   SYMBOL_LABELS,
@@ -146,19 +148,12 @@ const intersectionIds = (
 const curvePath = (points: CanvasPoint[]) => {
   const start = points[0]
   const end = points.at(-1) ?? start
-  const controlX = (start.x + end.x) / 2
-  const controlY = Math.min(start.y, end.y) - Math.max(30, Math.abs(end.x - start.x) * .25)
-  return `M ${start.x} ${start.y} Q ${controlX} ${controlY} ${end.x} ${end.y}`
+  const control = getCurveControlPoint(points)
+  return `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`
 }
 
 const arrowHeadPoints = (points: CanvasPoint[]) => {
-  const start = points[0]
-  const end = points.at(-1) ?? start
-  const angle = Math.atan2(end.y - start.y, end.x - start.x)
-  const size = 11
-  const a = { x: end.x - size * Math.cos(angle - Math.PI / 6), y: end.y - size * Math.sin(angle - Math.PI / 6) }
-  const b = { x: end.x - size * Math.cos(angle + Math.PI / 6), y: end.y - size * Math.sin(angle + Math.PI / 6) }
-  return `${a.x},${a.y} ${end.x},${end.y} ${b.x},${b.y}`
+  return getArrowHeadPoints(points).map((point) => `${point.x},${point.y}`).join(' ')
 }
 
 export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref) => {
