@@ -277,46 +277,6 @@ const loadImageFile = (file: File) => new Promise<{ src: string; width: number; 
   image.src = url
 })
 
-interface SaveFilePickerWindow extends Window {
-  showSaveFilePicker?: (options: {
-    suggestedName: string
-    types: Array<{ description: string; accept: Record<string, string[]> }>
-  }) => Promise<{
-    createWritable: () => Promise<{
-      write: (data: Blob) => Promise<void>
-      close: () => Promise<void>
-    }>
-  }>
-}
-
-const saveBlobToDevice = async (blob: Blob, fileName: string) => {
-  const savePicker = (window as SaveFilePickerWindow).showSaveFilePicker
-  if (savePicker) {
-    const handle = await savePicker({
-      suggestedName: fileName,
-      types: [{ description: '麻雀レイアウト共有ファイル', accept: { 'application/json': ['.json'] } }],
-    })
-    const writable = await handle.createWritable()
-    await writable.write(blob)
-    await writable.close()
-    return
-  }
-
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = fileName
-  anchor.rel = 'noopener'
-  anchor.style.position = 'fixed'
-  anchor.style.left = '-10000px'
-  document.body.appendChild(anchor)
-  anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
-  window.setTimeout(() => {
-    anchor.remove()
-    URL.revokeObjectURL(url)
-  }, 3000)
-}
-
 const App = () => {
   const [sharedLayout] = useState(readSharedLayout)
   const [initialLayout] = useState(() => sharedLayout ?? parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY)))
@@ -946,24 +906,6 @@ const App = () => {
     }
   }
 
-  const shareNamedLayout = async (id: string) => {
-    const saved = savedLayouts.find((item) => item.id === id)
-    if (!saved) return
-    try {
-      const contents = JSON.stringify({ format: 'mahjong-layout-tool', version: 1, name: saved.name, layout: saved.layout })
-      const safeName = saved.name.replace(/[\\/:*?"<>|]/g, '_').slice(0, 60) || '麻雀レイアウト'
-      const blob = new Blob([contents], { type: 'application/json;charset=utf-8' })
-      await saveBlobToDevice(blob, `${safeName}.mahjong-layout.json`)
-      notify('共有ファイルを保存しました')
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        notify('共有ファイルの保存をキャンセルしました')
-        return
-      }
-      notify('共有ファイルを保存できませんでした')
-    }
-  }
-
   const importSharedLayout = async (file: File) => {
     try {
       const data = JSON.parse(await file.text()) as Record<string, unknown>
@@ -1294,7 +1236,6 @@ const App = () => {
           onLoad={loadNamedLayout}
           onDelete={deleteNamedLayout}
           onRename={renameNamedLayout}
-          onShare={shareNamedLayout}
           onClose={() => setSavedLayoutsOpen(false)}
         />
       )}
