@@ -67,8 +67,8 @@ export const HelpModal = ({ onClose }: HelpModalProps) => {
             <div className="help-section-heading"><span>04</span><h3>保存・呼び出し・共有</h3></div>
             <div className="help-steps compact">
               <div><b>1</b><p><strong>保存する</strong><span>「保存・出力」タブの「保存」を押し、名前を入力します。保存するたびに保存ページへ追加されます。</span></p></div>
-              <div><b>2</b><p><strong>あとから開く</strong><span>「保存ページ」では、保存済みレイアウトの読み込み、タイトル変更、削除ができます。データはこのブラウザに保存されます。</span></p></div>
-              <div><b>3</b><p><strong>共有する</strong><span>保存ページの「共有」から、現在のレイアウトを含むリンクを作成して渡せます。受け取った人はリンクを開いて内容を確認できます。</span></p></div>
+              <div><b>2</b><p><strong>あとから開く</strong><span>「保存ページ」では、保存済みレイアウトの読み込み、タイトル変更、削除ができます。画像を含むデータは、このブラウザの大容量保存領域に保存されます。</span></p></div>
+              <div><b>3</b><p><strong>共有する</strong><span>保存ページの「共有ファイル」から送信または保存します。受け取った人は「保存・出力」タブの「共有ファイル読込」で開けます。</span></p></div>
             </div>
           </section>
 

@@ -39,6 +39,7 @@ interface ToolbarProps {
   onToggleSnap: () => void
   onSaveLocal: () => void
   onOpenSavedLayouts: () => void
+  onImportSharedLayout: () => void
   onAddImage: () => void
   onAddText: (text: string) => void
   onHelp: () => void
@@ -274,6 +275,7 @@ export const Toolbar = (props: ToolbarProps) => {
             <span className="tool-group-label">保存</span>
             <ToolButton label="保存" icon="↓" onClick={props.onSaveLocal} />
             <ToolButton label="保存ページ" icon="▤" onClick={props.onOpenSavedLayouts} />
+            <ToolButton label="共有ファイル読込" icon="↥" onClick={props.onImportSharedLayout} />
           </div>
         </>}
       </div>

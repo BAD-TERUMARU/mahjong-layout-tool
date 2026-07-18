@@ -49,6 +49,7 @@ import {
   randomHand,
   snap,
 } from './utils/layout'
+import { readLargeValue, writeLargeValue } from './utils/largeStorage'
 
 const AUTO_SAVE_KEY = 'mahjong-layout-tool:auto-v1'
 const SAVED_LAYOUTS_KEY = 'mahjong-layout-tool:saved-pages-v1'
@@ -211,11 +212,9 @@ const parseSavedLayout = (raw: string | null): SavedLayout | null => {
   }
 }
 
-const readNamedSavedLayouts = (): NamedSavedLayout[] => {
-  try {
-    const data = JSON.parse(localStorage.getItem(SAVED_LAYOUTS_KEY) ?? '[]') as unknown
-    if (!Array.isArray(data)) return []
-    return data.flatMap((value) => {
+const parseNamedSavedLayouts = (data: unknown): NamedSavedLayout[] => {
+  if (!Array.isArray(data)) return []
+  return data.flatMap((value) => {
       if (!value || typeof value !== 'object') return []
       const item = value as Record<string, unknown>
       const layout = parseSavedLayout(JSON.stringify(item.layout))
@@ -226,7 +225,12 @@ const readNamedSavedLayouts = (): NamedSavedLayout[] => {
         savedAt: typeof item.savedAt === 'string' ? item.savedAt : layout.savedAt,
         layout,
       }]
-    })
+  })
+}
+
+const readNamedSavedLayouts = (): NamedSavedLayout[] => {
+  try {
+    return parseNamedSavedLayouts(JSON.parse(localStorage.getItem(SAVED_LAYOUTS_KEY) ?? '[]') as unknown)
   } catch {
     return []
   }
@@ -274,7 +278,8 @@ const loadImageFile = (file: File) => new Promise<{ src: string; width: number; 
 })
 
 const App = () => {
-  const [initialLayout] = useState(() => readSharedLayout() ?? parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY)))
+  const [sharedLayout] = useState(readSharedLayout)
+  const [initialLayout] = useState(() => sharedLayout ?? parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY)))
   const history = useSceneHistory(initialLayout?.scene ?? EMPTY_SCENE)
   const scene = history.scene
   const [rulerCount, setRulerCount] = useState(() => initialLayout?.scene.elements.filter((element) => element.kind === 'tile').length ?? 0)
@@ -290,14 +295,19 @@ const App = () => {
   const [clipboard, setClipboard] = useState<CanvasElement[]>([])
   const [trashActive, setTrashActive] = useState(false)
   const [savedLayouts, setSavedLayouts] = useState<NamedSavedLayout[]>(readNamedSavedLayouts)
+  const [storageReady, setStorageReady] = useState(false)
   const [savedLayoutsOpen, setSavedLayoutsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(() => localStorage.getItem(HELP_KEY) !== '1')
   const [toast, setToast] = useState('')
   const workspaceRef = useRef<HTMLDivElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const shareInputRef = useRef<HTMLInputElement>(null)
   const imageAnchorRef = useRef<{ x: number; y: number } | null>(null)
   const autoSaveWarningShownRef = useRef(false)
   const toastTimerRef = useRef<number | null>(null)
+  const restoreHistoryLoadRef = useRef(history.load)
+  const sharedLayoutRef = useRef(sharedLayout)
+  restoreHistoryLoadRef.current = history.load
 
   const notify = (message: string) => {
     setToast(message)
@@ -313,21 +323,58 @@ const App = () => {
   })
 
   useEffect(() => {
-    try {
-      localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify({
+    let cancelled = false
+    const restoreLargeStorage = async () => {
+      try {
+        let storedLayouts = await readLargeValue<unknown>(SAVED_LAYOUTS_KEY)
+        if (storedLayouts === null) {
+          const legacyLayouts = readNamedSavedLayouts()
+          storedLayouts = legacyLayouts
+          if (legacyLayouts.length) await writeLargeValue(SAVED_LAYOUTS_KEY, legacyLayouts)
+        }
+        if (!cancelled) setSavedLayouts(parseNamedSavedLayouts(storedLayouts))
+
+        let storedAutoSave = await readLargeValue<unknown>(AUTO_SAVE_KEY)
+        if (storedAutoSave === null) {
+          const legacyAutoSave = parseSavedLayout(localStorage.getItem(AUTO_SAVE_KEY))
+          storedAutoSave = legacyAutoSave
+          if (legacyAutoSave) await writeLargeValue(AUTO_SAVE_KEY, legacyAutoSave)
+        }
+        const restored = storedAutoSave ? parseSavedLayout(JSON.stringify(storedAutoSave)) : null
+        if (!cancelled && !sharedLayoutRef.current && restored) {
+          restoreHistoryLoadRef.current(restored.scene)
+          setRulerCount(restored.scene.elements.filter((element) => element.kind === 'tile').length)
+          setShowGrid(restored.settings.showGrid)
+          setSnapToGrid(restored.settings.snapToGrid)
+        }
+        localStorage.removeItem(AUTO_SAVE_KEY)
+        localStorage.removeItem(SAVED_LAYOUTS_KEY)
+      } catch {
+        if (!cancelled) notify('大容量保存の初期化に失敗しました')
+      } finally {
+        if (!cancelled) setStorageReady(true)
+      }
+    }
+    void restoreLargeStorage()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!storageReady) return
+    void writeLargeValue(AUTO_SAVE_KEY, {
         version: 3,
         savedAt: new Date().toISOString(),
         scene,
         settings: { showGrid, snapToGrid },
-      } satisfies SavedLayout))
+      } satisfies SavedLayout).then(() => {
       autoSaveWarningShownRef.current = false
-    } catch {
+    }).catch(() => {
       if (!autoSaveWarningShownRef.current) {
         autoSaveWarningShownRef.current = true
-        setToast('保存容量が不足しています。画像を小さくするか不要な配置を削除してください')
+        setToast('ブラウザの保存領域を確保できませんでした')
       }
-    }
-  }, [scene, showGrid, snapToGrid])
+    })
+  }, [scene, showGrid, snapToGrid, storageReady])
 
   const nextZIndex = () => Math.max(0, ...scene.elements.map((element) => element.zIndex)) + 1
 
@@ -807,7 +854,7 @@ const App = () => {
     notify(message)
   }
 
-  const saveNamedLayout = (name: string) => {
+  const saveNamedLayout = async (name: string) => {
     const layout = makeSavedLayout()
     const saved: NamedSavedLayout = {
       id: createId('saved-layout'),
@@ -820,11 +867,11 @@ const App = () => {
     }
     const next = [saved, ...savedLayouts]
     try {
-      localStorage.setItem(SAVED_LAYOUTS_KEY, JSON.stringify(next))
+      await writeLargeValue(SAVED_LAYOUTS_KEY, next)
       setSavedLayouts(next)
       notify(`「${name}」を保存しました`)
     } catch {
-      notify('保存容量が不足しています。不要な保存ページを削除してください')
+      notify('保存できませんでした。ブラウザの保存設定を確認してください')
     }
   }
 
@@ -835,12 +882,12 @@ const App = () => {
     setSavedLayoutsOpen(false)
   }
 
-  const deleteNamedLayout = (id: string) => {
+  const deleteNamedLayout = async (id: string) => {
     const saved = savedLayouts.find((item) => item.id === id)
     if (!saved) return
     const next = savedLayouts.filter((item) => item.id !== id)
     try {
-      localStorage.setItem(SAVED_LAYOUTS_KEY, JSON.stringify(next))
+      await writeLargeValue(SAVED_LAYOUTS_KEY, next)
       setSavedLayouts(next)
       notify(`「${saved.name}」を削除しました`)
     } catch {
@@ -848,10 +895,10 @@ const App = () => {
     }
   }
 
-  const renameNamedLayout = (id: string, name: string) => {
+  const renameNamedLayout = async (id: string, name: string) => {
     const next = savedLayouts.map((item) => item.id === id ? { ...item, name } : item)
     try {
-      localStorage.setItem(SAVED_LAYOUTS_KEY, JSON.stringify(next))
+      await writeLargeValue(SAVED_LAYOUTS_KEY, next)
       setSavedLayouts(next)
       notify('保存ページのタイトルを更新しました')
     } catch {
@@ -863,13 +910,40 @@ const App = () => {
     const saved = savedLayouts.find((item) => item.id === id)
     if (!saved) return
     try {
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(saved.layout))))
-      const url = `${window.location.origin}${window.location.pathname}#${new URLSearchParams({ layout: encoded }).toString()}`
-      if (navigator.share) await navigator.share({ title: saved.name, text: '麻雀牌レイアウトツールの共有ページです', url })
-      else await navigator.clipboard.writeText(url)
-      notify('共有リンクを作成しました')
+      const contents = JSON.stringify({ format: 'mahjong-layout-tool', version: 1, name: saved.name, layout: saved.layout })
+      const safeName = saved.name.replace(/[\\/:*?"<>|]/g, '_').slice(0, 60) || '麻雀レイアウト'
+      const file = new File([contents], `${safeName}.mahjong-layout.json`, { type: 'application/json' })
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: saved.name, text: '麻雀牌レイアウトを共有します', files: [file] })
+        notify('共有ファイルを送信しました')
+      } else {
+        const url = URL.createObjectURL(file)
+        const anchor = document.createElement('a')
+        anchor.href = url
+        anchor.download = file.name
+        anchor.click()
+        URL.revokeObjectURL(url)
+        notify('共有ファイルを保存しました')
+      }
     } catch {
-      notify('共有リンクを作成できませんでした')
+      notify('共有を完了できませんでした')
+    }
+  }
+
+  const importSharedLayout = async (file: File) => {
+    try {
+      const data = JSON.parse(await file.text()) as Record<string, unknown>
+      const layoutValue = data.layout ?? data
+      const layout = parseSavedLayout(JSON.stringify(layoutValue))
+      if (!layout) throw new Error('invalid-layout')
+      const name = typeof data.name === 'string' && data.name.trim() ? data.name.trim() : file.name.replace(/\.mahjong-layout\.json$/i, '')
+      const saved: NamedSavedLayout = { id: createId('saved-layout'), name, savedAt: new Date().toISOString(), layout }
+      const next = [saved, ...savedLayouts]
+      await writeLargeValue(SAVED_LAYOUTS_KEY, next)
+      setSavedLayouts(next)
+      loadLayout(layout, `「${name}」を読み込みました`)
+    } catch {
+      notify('共有ファイルを読み込めませんでした')
     }
   }
 
@@ -1056,6 +1130,7 @@ const App = () => {
         onToggleSnap={() => setSnapToGrid((value) => !value)}
         onSaveLocal={saveQuickLayout}
         onOpenSavedLayouts={() => setSavedLayoutsOpen(true)}
+        onImportSharedLayout={() => shareInputRef.current?.click()}
         onAddImage={() => requestImage()}
         onAddText={(text) => commitText(text)}
         onHelp={() => setHelpOpen(true)}
@@ -1117,6 +1192,18 @@ const App = () => {
           const file = event.target.files?.[0]
           if (file) void addImageFile(file, imageAnchorRef.current)
           imageAnchorRef.current = null
+          event.target.value = ''
+        }}
+      />
+
+      <input
+        ref={shareInputRef}
+        className="visually-hidden"
+        type="file"
+        accept=".mahjong-layout.json,application/json"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) void importSharedLayout(file)
           event.target.value = ''
         }}
       />
