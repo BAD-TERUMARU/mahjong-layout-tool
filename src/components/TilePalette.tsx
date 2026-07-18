@@ -107,8 +107,7 @@ export const TilePalette = ({ onAddTile, placementMode, trashActive, onSelectPla
               type="button"
               draggable={choice.dragOnly}
               className={`symbol-palette-button${!choice.dragOnly && placementMode === choice.mode ? ' active' : ''}${choice.dragOnly ? ' drag-only' : ''}`}
-              onClick={() => !choice.dragOnly && onSelectPlacementMode(choice.mode)}
-              onDoubleClick={() => !choice.dragOnly && placementMode === choice.mode && onSelectPlacementMode('select')}
+              onClick={() => !choice.dragOnly && onSelectPlacementMode(placementMode === choice.mode ? 'select' : choice.mode)}
               onDragStart={(event) => {
                 if (!choice.dragOnly) return
                 event.dataTransfer.setData('application/x-mahjong-symbol', choice.mode)

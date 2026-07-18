@@ -83,7 +83,7 @@ export const HelpModal = ({ onClose }: HelpModalProps) => {
               <span><Shortcut>矢印</Shortcut> 少し移動</span>
               <span><Shortcut>Shift + 矢印</Shortcut> 大きく移動</span>
               <span><Shortcut>Esc</Shortcut> 選択・配置ツールを解除</span>
-              <span><Shortcut>選択中の配置ツールをダブルクリック</Shortcut> 配置ツールを解除</span>
+              <span><Shortcut>選択中の配置ツールをクリック</Shortcut> 配置ツールを解除</span>
             </div>
           </section>
         </div>

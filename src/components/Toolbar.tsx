@@ -54,7 +54,6 @@ const ToolButton = ({
   disabled,
   active,
   danger,
-  onDoubleClick,
 }: {
   label: string
   icon: string
@@ -62,13 +61,11 @@ const ToolButton = ({
   disabled?: boolean
   active?: boolean
   danger?: boolean
-  onDoubleClick?: () => void
 }) => (
   <button
     type="button"
     className={`tool-button${active ? ' active' : ''}${danger ? ' danger' : ''}`}
     onClick={onClick}
-    onDoubleClick={onDoubleClick}
     disabled={disabled}
     aria-pressed={active}
   >
@@ -246,8 +243,7 @@ export const Toolbar = (props: ToolbarProps) => {
                 key={mode}
                 label={label}
                 icon={icon}
-                onClick={() => props.onSetPlacementMode(mode)}
-                onDoubleClick={() => props.placementMode === mode && props.onSetPlacementMode('select')}
+                onClick={() => props.onSetPlacementMode(props.placementMode === mode ? 'select' : mode)}
                 active={props.placementMode === mode}
               />
             ))}
