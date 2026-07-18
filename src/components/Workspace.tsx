@@ -94,6 +94,11 @@ interface DrawingState {
   points: CanvasPoint[]
 }
 
+interface CurveDraftState {
+  start: CanvasPoint
+  end: CanvasPoint
+}
+
 interface ElementResizeState {
   pointerId: number
   id: string
@@ -168,6 +173,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   const [marquee, setMarquee] = useState<MarqueeState | null>(null)
   const [editor, setEditor] = useState<TextEditorState | null>(null)
   const [drawing, setDrawing] = useState<DrawingState | null>(null)
+  const [curveDraft, setCurveDraft] = useState<CurveDraftState | null>(null)
+  const [curvePreview, setCurvePreview] = useState<CanvasPoint | null>(null)
   const [camera, setCamera] = useState({ x: 0, y: 0 })
   const [draggingIds, setDraggingIds] = useState<Set<string>>(() => new Set())
   const [dropPreview, setDropPreview] = useState<DropPreview | null>(null)
@@ -195,6 +202,12 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   useEffect(() => {
     if (props.placementMode === 'text' || props.placementMode === 'rectangle' || props.placementMode === 'circle' || props.placementMode === 'triangle' || props.placementMode === 'cross') return
     setPlacementPreview(null)
+  }, [props.placementMode])
+
+  useEffect(() => {
+    if (props.placementMode === 'curve') return
+    setCurveDraft(null)
+    setCurvePreview(null)
   }, [props.placementMode])
 
   const beginElementDrag = (event: ReactPointerEvent<HTMLButtonElement>, element: CanvasElement) => {
@@ -397,6 +410,13 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       return
     }
     if (event.button !== 0) return
+    if (props.placementMode === 'curve' && curveDraft) {
+      const apex = canvasPoint(event)
+      props.onCommitDrawing([curveDraft.start, apex, curveDraft.end], 'curve')
+      setCurveDraft(null)
+      setCurvePreview(null)
+      return
+    }
     if (props.placementMode === 'draw' || props.placementMode === 'line' || props.placementMode === 'curve' || props.placementMode === 'arrow') {
       const point = canvasPoint(event)
       const state = { pointerId: event.pointerId, points: [point] }
@@ -432,10 +452,14 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       const point = canvasPoint(event)
       const previous = activeDrawing.points.at(-1)
       if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 2) {
-        const next = { ...activeDrawing, points: props.placementMode === 'line' || props.placementMode === 'arrow' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point] }
+        const next = { ...activeDrawing, points: props.placementMode === 'line' || props.placementMode === 'curve' || props.placementMode === 'arrow' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point] }
         drawingRef.current = next
         setDrawing(next)
       }
+      return
+    }
+    if (curveDraft) {
+      setCurvePreview(canvasPoint(event))
       return
     }
     const state = marqueeRef.current
@@ -463,11 +487,16 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     const activeDrawing = drawingRef.current
     if (activeDrawing?.pointerId === event.pointerId) {
       const point = canvasPoint(event)
-      const points = props.placementMode === 'line' || props.placementMode === 'arrow' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point]
+      const points = props.placementMode === 'line' || props.placementMode === 'curve' || props.placementMode === 'arrow' ? [activeDrawing.points[0], point] : [...activeDrawing.points, point]
       drawingRef.current = null
       setDrawing(null)
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+      if (props.placementMode === 'curve' && points.length === 2 && Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) > 3) {
+        setCurveDraft({ start: points[0], end: points[1] })
+        setCurvePreview({ x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 })
+        return
       }
       if (points.length >= 2 && Math.hypot(points.at(-1)!.x - points[0].x, points.at(-1)!.y - points[0].y) > 3) {
         props.onCommitDrawing(points, props.placementMode === 'line' ? 'line' : props.placementMode === 'curve' ? 'curve' : props.placementMode === 'arrow' ? 'arrow' : 'freehand')
@@ -850,10 +879,18 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           }}
           aria-hidden="true"
         >
-          {props.placementMode === 'curve' ? <path d={curvePath(drawing.points)} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" /> : <>
+          <>
             <polyline points={drawing.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
             {props.placementMode === 'arrow' && <polyline points={arrowHeadPoints(drawing.points)} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />}
-          </>}
+          </>
+        </svg>
+      )}
+
+      {curveDraft && curvePreview && (
+        <svg className="drawing-preview export-hidden" style={{ left: 0, top: 0, right: 'auto', bottom: 'auto', width: props.scene.width, height: props.scene.height, transform: `translate(${camera.x}px, ${camera.y}px)` }} aria-hidden="true">
+          <line x1={curveDraft.start.x} y1={curveDraft.start.y} x2={curveDraft.end.x} y2={curveDraft.end.y} stroke="#72988c" strokeWidth="2" strokeDasharray="6 5" />
+          <path d={curvePath([curveDraft.start, curvePreview, curveDraft.end])} fill="none" stroke="#244a40" strokeWidth="4" strokeLinecap="round" />
+          <circle cx={curvePreview.x} cy={curvePreview.y} r="5" fill="#fff" stroke="#244a40" strokeWidth="2" />
         </svg>
       )}
 
