@@ -200,7 +200,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
   }, [props.editTextRequest, props.scene.elements])
 
   useEffect(() => {
-    if (props.placementMode === 'text' || props.placementMode === 'rectangle' || props.placementMode === 'circle' || props.placementMode === 'triangle' || props.placementMode === 'cross') return
+    if (props.placementMode === 'text' || props.placementMode === 'rectangle' || props.placementMode === 'circle' || props.placementMode === 'triangle' || props.placementMode === 'cross' || props.placementMode === 'wave') return
     setPlacementPreview(null)
   }, [props.placementMode])
 
@@ -386,7 +386,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
       setPlacementPreview({ kind: 'text', x: point.x - 70, y: point.y - 20, width: 140, height: 40, label: '文字' })
       return
     }
-    if (mode === 'rectangle' || mode === 'circle' || mode === 'triangle' || mode === 'cross') {
+    if (mode === 'rectangle' || mode === 'circle' || mode === 'triangle' || mode === 'cross' || mode === 'wave') {
       const dimensions = getSymbolBaseDimensions(mode)
       setPlacementPreview({
         kind: 'symbol',
@@ -568,7 +568,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
     const x = event.clientX - bounds.left - camera.x
     const y = event.clientY - bounds.top - camera.y
     const symbolType = event.dataTransfer.getData('application/x-mahjong-symbol')
-    if (symbolType === 'rectangle' || symbolType === 'circle' || symbolType === 'triangle' || symbolType === 'cross') {
+    if (symbolType === 'rectangle' || symbolType === 'circle' || symbolType === 'triangle' || symbolType === 'cross' || symbolType === 'wave') {
       const dimensions = getSymbolBaseDimensions(symbolType)
       setDropPreview({
         kind: 'symbol',
@@ -635,7 +635,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           return
         }
         const symbolType = event.dataTransfer.getData('application/x-mahjong-symbol')
-        if (symbolType === 'rectangle' || symbolType === 'circle' || symbolType === 'triangle' || symbolType === 'cross') {
+        if (symbolType === 'rectangle' || symbolType === 'circle' || symbolType === 'triangle' || symbolType === 'cross' || symbolType === 'wave') {
           props.onPlaceSymbol(symbolType, x, y)
           return
         }
@@ -671,7 +671,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
             height: dimensions.height,
           },
           onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
-            if (props.placementMode !== 'draw') beginElementDrag(event, element)
+            if (props.placementMode !== 'draw' && props.placementMode !== 'line' && props.placementMode !== 'curve' && props.placementMode !== 'arrow') beginElementDrag(event, element)
           },
           onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => openContextMenu(event, element),
         }
@@ -803,6 +803,10 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
               >
                 <polygon points="49.5,5 94,61 5,61" fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinejoin="round" />
               </svg>
+            ) : element.symbolType === 'wave' ? (
+              <svg className="symbol-visual symbol-wave" viewBox="0 0 240 66" style={{ width: visualWidth, height: visualHeight, transform: visualTransform }} aria-hidden="true">
+                <path d="M 4 33 C 20 7, 44 7, 60 33 S 100 59, 116 33 S 156 7, 172 33 S 212 59, 236 33" fill="none" stroke={element.color} strokeWidth={element.strokeWidth} strokeLinecap="round" />
+              </svg>
             ) : (
               <span
                 className={`symbol-visual symbol-${element.symbolType}`}
@@ -857,6 +861,8 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           <svg className="drop-symbol-preview drop-symbol-triangle" viewBox="0 0 99 66" aria-hidden="true">
             <polygon points="49.5,5 94,61 5,61" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
           </svg>
+        ) : preview.kind === 'symbol' && preview.symbolType === 'wave' ? (
+          <svg className="drop-symbol-preview drop-symbol-wave" viewBox="0 0 240 66" aria-hidden="true"><path d="M 4 33 C 20 7, 44 7, 60 33 S 100 59, 116 33 S 156 7, 172 33 S 212 59, 236 33" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>
         ) : preview.kind === 'symbol' && preview.symbolType ? (
           <span className={`drop-symbol-preview drop-symbol-${preview.symbolType}`} aria-hidden="true">
             {preview.symbolType === 'cross' ? '✕' : ''}

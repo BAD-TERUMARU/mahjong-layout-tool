@@ -2,7 +2,7 @@ export type Suit = 'man' | 'pin' | 'sou' | 'honor'
 
 export type Rotation = 0 | 90 | 180 | 270
 
-export type SymbolType = 'rectangle' | 'cross' | 'circle' | 'triangle'
+export type SymbolType = 'rectangle' | 'cross' | 'circle' | 'triangle' | 'wave'
 
 export type DrawingType = 'freehand' | 'line' | 'curve' | 'arrow'
 

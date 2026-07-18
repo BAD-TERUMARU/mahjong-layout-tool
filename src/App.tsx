@@ -65,7 +65,7 @@ const isRotation = (value: unknown): value is Rotation =>
   value === 0 || value === 90 || value === 180 || value === 270
 
 const isSymbolType = (value: unknown): value is SymbolType =>
-  value === 'rectangle' || value === 'cross' || value === 'circle' || value === 'triangle'
+  value === 'rectangle' || value === 'cross' || value === 'circle' || value === 'triangle' || value === 'wave'
 
 const isDrawingType = (value: unknown): value is DrawingType =>
   value === 'freehand' || value === 'line' || value === 'curve' || value === 'arrow'

@@ -30,6 +30,7 @@ export const SYMBOL_LABELS: Record<SymbolType, string> = {
   cross: 'バツ（牌1枚分）',
   circle: '丸（牌2枚分）',
   triangle: '三角形（牌2枚分）',
+  wave: '波線（牌5枚分）',
 }
 
 export const createId = (prefix: string) =>
@@ -115,6 +116,7 @@ export const getSymbolBaseDimensions = (symbolType: SymbolType) => {
   if (symbolType === 'circle' || symbolType === 'triangle') {
     return { width: TILE_WIDTH * 2 + TILE_GAP, height: TILE_HEIGHT }
   }
+  if (symbolType === 'wave') return { width: TILE_WIDTH * 5 + TILE_GAP * 4, height: TILE_HEIGHT }
   return { width: TILE_WIDTH, height: TILE_HEIGHT }
 }
 

@@ -31,6 +31,7 @@ const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; h
   { mode: 'circle', icon: '〇', label: '丸', hint: 'ドラッグして配置', dragOnly: true },
   { mode: 'triangle', icon: '△', label: '三角形', hint: 'ドラッグして配置', dragOnly: true },
   { mode: 'cross', icon: '✕', label: 'バツ', hint: 'ドラッグして配置', dragOnly: true },
+  { mode: 'wave', icon: '〰', label: '波線（牌5枚分）', hint: 'ドラッグして配置', dragOnly: true },
   { mode: 'line', icon: '╱', label: '直線', hint: 'ドラッグで描画' },
   { mode: 'curve', icon: '⌒', label: '曲線', hint: 'ドラッグで描画' },
   { mode: 'arrow', icon: '→', label: '矢印', hint: 'ドラッグで描画' },
@@ -38,8 +39,8 @@ const symbolChoices: Array<{ mode: PlacementMode; icon: string; label: string; h
 ]
 
 const setSymbolDragPreview = (event: ReactDragEvent<HTMLButtonElement>, mode: PlacementMode) => {
-  if (mode !== 'rectangle' && mode !== 'circle' && mode !== 'triangle' && mode !== 'cross') return
-  const width = mode === 'rectangle' ? 148 : mode === 'cross' ? 48 : 98
+  if (mode !== 'rectangle' && mode !== 'circle' && mode !== 'triangle' && mode !== 'cross' && mode !== 'wave') return
+  const width = mode === 'wave' ? 240 : mode === 'rectangle' ? 148 : mode === 'cross' ? 48 : 98
   const height = 66
   const preview = document.createElement('div')
   preview.style.position = 'fixed'
@@ -63,6 +64,8 @@ const setSymbolDragPreview = (event: ReactDragEvent<HTMLButtonElement>, mode: Pl
     preview.style.placeItems = 'center'
     preview.style.font = '700 49px/1 "Yu Gothic", sans-serif'
     preview.textContent = '✕'
+  } else if (mode === 'wave') {
+    preview.innerHTML = '<svg viewBox="0 0 240 66" width="240" height="66" aria-hidden="true"><path d="M 4 33 C 20 7, 44 7, 60 33 S 100 59, 116 33 S 156 7, 172 33 S 212 59, 236 33" fill="none" stroke="#244a40" stroke-width="4" stroke-linecap="round" /></svg>'
   } else {
     preview.innerHTML = '<svg viewBox="0 0 99 66" width="98" height="66" aria-hidden="true"><polygon points="49.5,5 94,61 5,61" fill="none" stroke="#244a40" stroke-width="4" stroke-linejoin="round" /></svg>'
   }
