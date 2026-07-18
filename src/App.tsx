@@ -390,7 +390,7 @@ const App = () => {
     const isDropped = dropX !== undefined || dropY !== undefined
     // 牌一覧からのクリック追加は、常に左上の初期位置から開始する。
     // 途中で牌を移動しても追加の開始位置は変えず、既存牌だけを避ける。
-    let x = dropX ?? 24
+    let x = dropX ?? 32
     const y = dropY ?? 32
 
     if (!isDropped) {

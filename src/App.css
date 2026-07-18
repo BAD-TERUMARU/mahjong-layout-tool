@@ -239,7 +239,7 @@
 .workspace-scroll { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0; overflow: hidden; background: #dfe6e0; }
 .workspace-canvas { cursor: grab; }
 .workspace-canvas:active { cursor: grabbing; }
-.workspace-tile-ruler { box-sizing: border-box; min-width: 674px; margin-bottom: 5px; padding: 3px 0 4px 24px; border: 1px solid #b9c8c0; border-radius: 6px; background: #f9fcfa; color: #61756d; }
+.workspace-tile-ruler { box-sizing: border-box; min-width: 674px; margin-bottom: 5px; padding: 3px 0 4px 32px; border: 1px solid #b9c8c0; border-radius: 6px; background: #f9fcfa; color: #61756d; }
 .workspace-tile-ruler-title { display: flex; align-items: baseline; gap: 5px; height: 14px; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
 .workspace-tile-ruler-title strong { color: #1b5a49; font: 800 11px ui-monospace, monospace; letter-spacing: 0; }
 .workspace-tile-ruler-title small { margin-left: 1px; color: #758780; font: 700 9px Inter, sans-serif; }
