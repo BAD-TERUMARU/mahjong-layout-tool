@@ -41,16 +41,27 @@ export const clamp = (value: number, min: number, max: number) =>
 export const snap = (value: number, enabled: boolean) =>
   enabled ? Math.round(value / GRID_SIZE) * GRID_SIZE : Math.round(value)
 
-/** The curve bends toward the side where the drag begins: a stroke starting
- * above its end bows upward, while one starting below bows downward. */
+/**
+ * A curve follows the stroke the user drew. The point furthest from the
+ * start/end chord becomes the visible apex, so it can be drawn naturally in
+ * any direction instead of relying on a gesture direction convention.
+ */
 export const getCurveControlPoint = (points: CanvasPoint[]) => {
   const start = points[0]
   const end = points.at(-1) ?? start
-  const lift = Math.max(30, Math.hypot(end.x - start.x, end.y - start.y) * 0.25)
-  const startsAbove = start.y <= end.y
+  const chordX = end.x - start.x
+  const chordY = end.y - start.y
+  const chordLength = Math.hypot(chordX, chordY)
+  const apex = points.reduce((furthest, point) => {
+    const distance = chordLength === 0
+      ? Math.hypot(point.x - start.x, point.y - start.y)
+      : Math.abs(chordX * (start.y - point.y) - (start.x - point.x) * chordY) / chordLength
+    return distance > furthest.distance ? { point, distance } : furthest
+  }, { point: points[Math.floor(points.length / 2)] ?? start, distance: -1 })
+  // A quadratic Bézier passes through (start + 2 * control + end) / 4 at t = .5.
   return {
-    x: (start.x + end.x) / 2,
-    y: startsAbove ? Math.min(start.y, end.y) - lift : Math.max(start.y, end.y) + lift,
+    x: 2 * apex.point.x - (start.x + end.x) / 2,
+    y: 2 * apex.point.y - (start.y + end.y) / 2,
   }
 }
 
