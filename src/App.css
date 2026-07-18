@@ -417,7 +417,6 @@
 .help-steps p { margin: 0; display: grid; gap: 2px; }
 .help-steps strong { color: #244a40; font-size: 13px; }
 .help-steps span { color: #73837e; font-size: 11px; line-height: 1.5; }
-.help-steps p span b, .help-grid p b { color: #9a6920; font-weight: 800; }
 .help-steps.compact { gap: 10px; }
 .help-steps.compact > div { align-items: flex-start; }
 .help-steps.compact b { width: 25px; height: 25px; flex-basis: 25px; font-size: 12px; }
