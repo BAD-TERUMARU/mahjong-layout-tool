@@ -615,7 +615,7 @@ export const Workspace = forwardRef<HTMLDivElement, WorkspaceProps>((props, ref)
           props.onPlaceSymbol(symbolType, x, y)
           return
         }
-        const files = [...event.dataTransfer.files].filter((file) => file.type.startsWith('image/'))
+        const files = [...event.dataTransfer.files].filter((file) => file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.mahjong-layout.json'))
         if (files.length) {
           props.onDropFiles(files, x, y)
           return

@@ -1137,7 +1137,11 @@ const App = () => {
               placementMode={placementMode}
               editTextRequest={editTextRequest}
               onDropTile={addTile}
-              onDropFiles={(files, x, y) => files.forEach((file, index) => void addImageFile(file, { x: x + index * 20, y: y + index * 20 }))}
+              onDropFiles={(files, x, y) => {
+                const sharedLayout = files.find((file) => file.name.toLowerCase().endsWith('.mahjong-layout.json'))
+                if (sharedLayout) void importSharedLayout(sharedLayout)
+                files.filter((file) => file.type.startsWith('image/')).forEach((file, index) => void addImageFile(file, { x: x + index * 20, y: y + index * 20 }))
+              }}
               onDropText={(text, x, y) => commitText(text, x, y)}
               onSelectElement={selectElement}
               onSelectRange={selectRange}
