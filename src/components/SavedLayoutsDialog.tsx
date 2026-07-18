@@ -144,7 +144,7 @@ export const SavedLayoutsDialog = (props: SavedLayoutsDialogProps) => {
                 <div className="saved-layout-card-actions">
                   <button type="button" className="saved-layout-load" onClick={() => props.onLoad(saved.id)}>呼び出す</button>
                   {editingId === saved.id ? <button type="button" className="saved-layout-rename" onClick={commitRename}>タイトル保存</button> : <button type="button" className="saved-layout-rename" onClick={() => beginRename(saved)}>タイトル編集</button>}
-                  <button type="button" className="saved-layout-share" onClick={() => props.onShare(saved.id)}>共有ファイル</button>
+                  <button type="button" className="saved-layout-share" onClick={() => props.onShare(saved.id)}>共有ファイル保存</button>
                   <button type="button" className="saved-layout-delete" onClick={() => props.onDelete(saved.id)}>削除</button>
                 </div>
               </article>

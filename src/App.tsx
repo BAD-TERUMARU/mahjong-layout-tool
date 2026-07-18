@@ -912,21 +912,19 @@ const App = () => {
     try {
       const contents = JSON.stringify({ format: 'mahjong-layout-tool', version: 1, name: saved.name, layout: saved.layout })
       const safeName = saved.name.replace(/[\\/:*?"<>|]/g, '_').slice(0, 60) || '麻雀レイアウト'
-      const file = new File([contents], `${safeName}.mahjong-layout.json`, { type: 'application/json' })
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: saved.name, text: '麻雀牌レイアウトを共有します', files: [file] })
-        notify('共有ファイルを送信しました')
-      } else {
-        const url = URL.createObjectURL(file)
-        const anchor = document.createElement('a')
-        anchor.href = url
-        anchor.download = file.name
-        anchor.click()
-        URL.revokeObjectURL(url)
-        notify('共有ファイルを保存しました')
-      }
+      const blob = new Blob([contents], { type: 'application/json;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `${safeName}.mahjong-layout.json`
+      anchor.style.display = 'none'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500)
+      notify('共有ファイルをダウンロードしました')
     } catch {
-      notify('共有を完了できませんでした')
+      notify('共有ファイルを保存できませんでした')
     }
   }
 
